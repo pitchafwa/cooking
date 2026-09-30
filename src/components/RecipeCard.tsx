@@ -26,6 +26,7 @@ export function RecipeCard({ r, have, soon = [] }: { r: Recipe; have: Set<string
       <Heart id={r.id} />
       <span class={`pill ${a.tone}`}>{a.tone === 'ready' ? '✓ ' : ''}{a.label}</span>
       <h3>{r.title}</h3>
+      {r.alt && <p class="alt">{r.alt}</p>}
       <p class="meta">{cap(r.cuisine)} · {fmtTime(r.minutes)} · {cap(r.difficulty)}</p>
       {a.missing.length > 0 && a.missing.length <= 3 && (
         <p class="missing">Missing: {a.missing.map((m) => m.name).join(', ')}</p>

@@ -108,3 +108,6 @@ input:focus, select:focus, button:focus-visible, a:focus-visible { outline: 3px 
 .buy h2 { font-size: 1.1rem; margin: 0 0 6px; } .buy .sub { margin: 10px 0 6px; font-size: .85rem; } .plan { margin: 0; }
 .buychip { border-color: var(--sage); background: #f4faf4; } .buychip b { color: var(--sage-deep); } .tier { color: var(--muted); font-size: .75rem; }
 .soon-note { margin: 0; font-size: .82rem; color: var(--peach-deep); }
+.alt { margin: -2px 28px 0 0; font-size: .78rem; color: var(--muted); font-style: italic; }
+.detail .alt { margin: 0 0 4px; }
+.seg.small { margin: 6px 0 10px; } .seg.small button { padding: 5px 13px; font-size: .85rem; }

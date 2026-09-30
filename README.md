@@ -27,6 +27,9 @@ Known limits of the source: quantities have no units, and only line up with ingr
 After changing ingredient rules in either `scripts/build_recipes.py` or `src/ingredients.ts`, run
 `python3 scripts/check_canon_parity.py` to confirm the pipeline and the browser normalize names identically.
 
+Recipe titles are renamed to the dish (`scripts/titles.py`: drops possessive names, hype words, parentheticals, "guide to" style
+prefixes); the original is kept as `alt` and shown under the title. `python3 scripts/test_titles.py --sample 50` checks the rules.
+
 `npm run data:sample` overwrites the data with a tiny 38-recipe fixture (handy for offline work).
 
 ## Deploy

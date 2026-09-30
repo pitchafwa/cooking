@@ -8,7 +8,7 @@ from collections import defaultdict
 from pathlib import Path
 
 BUCKETS = 64
-INDEX_KEYS = ("id", "title", "cuisine", "minutes", "difficulty", "meals", "vibes", "diets", "main", "rating", "ratingCount")
+INDEX_KEYS = ("id", "title", "cuisine", "minutes", "difficulty", "meals", "vibes", "diets", "main", "rating", "ratingCount", "alt")
 
 
 def write_dataset(recipes, data_dir):

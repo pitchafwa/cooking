@@ -47,6 +47,10 @@ export function availability(r: Recipe, have: Set<string>): Availability {
   return { missing, label: `Need ${missing.length} more`, tone: missing.length <= 3 ? 'close' : 'far' };
 }
 
+/** Mostly-sweet bakes (desserts, breads); everything else counts as a meal. */
+export const isBaking = (r: Recipe) =>
+  r.meals.some((m) => m === 'dessert' || m === 'bread') && !r.meals.some((m) => ['dinner', 'lunch', 'soup', 'salad', 'breakfast'].includes(m));
+
 export const hasPricey = (names: string[]) => names.some((n) => costTier(n) === 3);
 
 // ---------- "what should I buy?" ----------

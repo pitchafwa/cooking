@@ -13,6 +13,8 @@ export interface Ingredient {
 export interface Recipe {
   id: string;
   title: string;
+  /** original Food.com title when we renamed it to the dish name */
+  alt?: string;
   /** shard number for fetching RecipeDetailData */
   b: number;
   cuisine: string;

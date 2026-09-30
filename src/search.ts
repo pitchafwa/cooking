@@ -6,6 +6,7 @@ let indexed: Recipe[] | null = null;
 
 const keys = [
   { name: 'title', weight: 0.6 },
+  { name: 'alt', weight: 0.12 },
   { name: 'ingredients.name', weight: 0.2 },
   { name: 'cuisine', weight: 0.08 },
   { name: 'main', weight: 0.06 },

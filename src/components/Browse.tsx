@@ -1,7 +1,7 @@
 import { signal, computed, effect } from '@preact/signals';
 import { recipes } from '../data';
 import { favorites, pantry, useSoon } from '../store';
-import { onHand, missingById, soonCovers, soonUsed, hasPricey, suggestPurchases } from '../match';
+import { onHand, missingById, soonCovers, soonUsed, hasPricey, suggestPurchases, isBaking } from '../match';
 import { searchRecipes } from '../search';
 import { RecipeCard } from './RecipeCard';
 
@@ -16,6 +16,8 @@ const diets = signal<string[]>([]);
 const avail = signal<'any' | 'ready' | 'two' | 'five'>('any');
 const sort = signal<'match' | 'quick' | 'rated' | 'soon'>('match');
 const skipPricey = signal(false);
+/** what the "worth picking up" panel optimizes for */
+const buyFor = signal<'meals' | 'baking' | 'all'>('meals');
 /** show recipes that would become cookable after buying exactly these */
 const focus = signal<string[]>([]);
 const showFilters = signal(false);
@@ -97,7 +99,7 @@ export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
   });
 
   const buy = !favoritesOnly && !focus.value.length && avail.value !== 'ready' && pantry.value.length > 0
-    ? suggestPurchases(base, miss, skipPricey.value) : null;
+    ? suggestPurchases(base.filter((r) => buyFor.value === 'all' || (buyFor.value === 'baking') === isBaking(r)), miss, skipPricey.value) : null;
 
   // Text search keeps relevance order; otherwise sort by the chosen option.
   if (!query.value.trim()) {
@@ -134,7 +136,7 @@ export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
         <p class="focus">Showing recipes you can make after buying <strong>{focus.value.join(' + ')}</strong>
           <button class="btn ghost" onClick={() => (focus.value = [])}>Clear ✕</button></p>
       )}
-      {buy && <BuyPanel buy={buy} />}
+      {!favoritesOnly && !focus.value.length && avail.value !== 'ready' && pantry.value.length > 0 && <BuyPanel buy={buy!} />}
 
       {showFilters.value && (
         <div class="filters">
@@ -183,10 +185,15 @@ const dollars = (tier: number) => '$'.repeat(tier);
 
 function BuyPanel({ buy }: { buy: Buy }) {
   const { singles, plan } = buy;
-  if (!singles.length && !plan) return null;
   return (
     <div class="buy">
       <h2>Worth picking up 🛒</h2>
+      <div class="seg small" role="group" aria-label="What to optimize for">
+        {([['meals', 'For meals'], ['baking', 'For baking'], ['all', 'Everything']] as const).map(([k, l]) => (
+          <button key={k} class={buyFor.value === k ? 'on' : ''} onClick={() => (buyFor.value = k)}>{l}</button>
+        ))}
+      </div>
+      {!singles.length && !plan && <p class="sub">Nothing within a few ingredients for this mix. Try another tab or loosen the filters.</p>}
       {plan && (
         <p class="plan">
           Best trip: <strong>{plan.items.join(' + ')}</strong> opens up <strong>{plan.unlocks}</strong> recipe{plan.unlocks === 1 ? '' : 's'}.{' '}

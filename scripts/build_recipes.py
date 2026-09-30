@@ -19,6 +19,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from taxonomy import infer_diets, infer_main, infer_difficulty
 from dataset_io import write_dataset, write_canon
+from titles import clean_title, display_original
 
 csv.field_size_limit(sys.maxsize)
 
@@ -293,11 +294,14 @@ def main():
         cuisines = [CUISINE_KW[k] for k in kws if k in CUISINE_KW]
         cuisine = next((c for c in SPECIFIC_FIRST if c in cuisines), cuisines[0] if cuisines else "other")
         diff = infer_difficulty(minutes, len(steps), len(names))
+        title = clean_title(row["Name"])
+        alt = display_original(row["Name"])
+        alt = None if alt.lower() == title.lower() else alt
         slug = re.sub(r"[^a-z0-9]+", "-", row["Name"].lower()).strip("-")
         desc = " ".join((row["Description"] or "").split())
         servings = num(row["RecipeServings"])
         out.append({
-            "id": f"f-{int(row['RecipeId'])}", "title": title_case(" ".join(row["Name"].split())),
+            "id": f"f-{int(row['RecipeId'])}", "title": title, "alt": alt,
             "description": None if not desc or desc == "NA" or GENERIC_DESC.match(desc) else desc[:280],
             "cuisine": cuisine, "minutes": minutes, "difficulty": diff, "meals": meals,
             "vibes": vibes_for(minutes, diff, meals, kws), "diets": infer_diets(names),

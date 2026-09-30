@@ -27,6 +27,7 @@ export function RecipeDetail({ id }: { id: string }) {
         <h1>{r.title}</h1>
         <Heart id={r.id} />
       </div>
+      {r.alt && <p class="alt">Originally “{r.alt}”</p>}
       <p class="meta">
         {title(r.cuisine)} · {fmtTime(r.minutes)} · {title(r.difficulty)}
         {d?.servings ? ` · serves ${d.servings}` : ''}
