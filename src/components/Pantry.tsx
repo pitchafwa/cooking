@@ -6,7 +6,9 @@ import { onHand, missingFor } from '../match';
 const draft = signal('');
 
 export function Pantry() {
-  const known = [...new Set(recipes.value.flatMap((r) => r.ingredients.map((i) => i.name)))].sort();
+  const counts = new Map<string, number>();
+  recipes.value.forEach((r) => r.ingredients.forEach((i) => counts.set(i.name, (counts.get(i.name) ?? 0) + 1)));
+  const known = [...counts].filter(([, c]) => c >= 3).map(([n]) => n).sort();
   const ready = recipes.value.filter((r) => missingFor(r, onHand.value).length === 0).length;
   const submit = (e: Event) => { e.preventDefault(); addToPantry(draft.value); draft.value = ''; };
 

@@ -1,4 +1,4 @@
-import { signal, computed } from '@preact/signals';
+import { signal, computed, effect } from '@preact/signals';
 import { recipes } from '../data';
 import { favorites } from '../store';
 import { onHand, missingFor } from '../match';
@@ -16,6 +16,13 @@ const diets = signal<string[]>([]);
 const avail = signal<'any' | 'ready' | 'two' | 'five'>('any');
 const sort = signal<'match' | 'quick' | 'rated'>('match');
 const showFilters = signal(false);
+const shown = signal(60);
+
+// Any change to the search or filters restarts pagination.
+effect(() => {
+  [query.value, cuisine.value, meal.value, main.value, maxTime.value, difficulty.value, vibes.value, diets.value, avail.value];
+  shown.value = 60;
+});
 
 const pretty = (s: string) => s.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
 const options = (pick: (r: (typeof recipes.value)[number]) => string | string[]) =>
@@ -27,6 +34,7 @@ const activeCount = computed(() =>
   vibes.value.length + diets.value.length + (avail.value !== 'any' ? 1 : 0));
 
 function reset() {
+  shown.value = 60;
   cuisine.value = meal.value = main.value = difficulty.value = '';
   maxTime.value = 0; vibes.value = []; diets.value = []; avail.value = 'any';
 }
@@ -135,7 +143,12 @@ export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
           {favoritesOnly && !favorites.value.length ? 'Tap the ♡ on a recipe to keep it here.' : 'Nothing matches — try loosening a filter ✨'}
         </p>
       ) : (
-        <div class="grid">{list.slice(0, 120).map((r) => <RecipeCard key={r.id} r={r} have={have} />)}</div>
+        <>
+          <div class="grid">{list.slice(0, shown.value).map((r) => <RecipeCard key={r.id} r={r} have={have} />)}</div>
+          {list.length > shown.value && (
+            <p class="more"><button class="btn ghost" onClick={() => (shown.value += 60)}>Show more ({list.length - shown.value} left)</button></p>
+          )}
+        </>
       )}
     </section>
   );

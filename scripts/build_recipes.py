@@ -1,22 +1,24 @@
-"""Build public/data/recipes.json from the Food.com Kaggle dataset.
+"""Build public/data/recipes.json from the Food.com "recipes and reviews" dataset.
 
 Usage:
-  python3 scripts/build_recipes.py --recipes data/raw/RAW_recipes.csv \
-      --interactions data/raw/RAW_interactions.csv --limit 4000
+  python3 scripts/build_recipes.py --recipes data/raw/recipes.csv --limit 15000
 
-Dataset: https://www.kaggle.com/datasets/shuyangli94/food-com-recipes-and-user-interactions
-License: CC BY-NC-SA 4.0 (credit Food.com; non-commercial; share-alike).
+Dataset: https://www.kaggle.com/datasets/irkaal/foodcom-recipes-and-reviews
+(Food.com recipes, scraped 2020; download via the Kaggle page or
+https://www.kaggle.com/api/v1/datasets/download/irkaal/foodcom-recipes-and-reviews).
+Credit Food.com; personal, non-commercial use.
 
-NOTE: RAW_recipes.csv lists ingredient *names* only (no quantities); amounts
-appear inside the step text. Recipes get `text` == the ingredient name.
+Ingredient quantities in this dataset have no units ("1 1/2" for sugar), so the
+UI shows them as a bare number and the units live in the method text.
 
-Prints the most frequent ingredient names that fell through the alias table, so
-ALIASES can be extended iteratively.
+Prints the most frequent canonical ingredient names afterwards so ALIASES can be
+extended iteratively.
 """
 import argparse, ast, csv, json, re, sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from taxonomy import infer_diets, infer_main, infer_difficulty
+from dataset_io import write_dataset
 
 csv.field_size_limit(sys.maxsize)
 
@@ -40,8 +42,8 @@ ALIASES = {
     "parmesan cheese": "parmesan", "grated parmesan cheese": "parmesan", "parmigiano-reggiano": "parmesan",
     "cheddar cheese": "cheddar", "sharp cheddar cheese": "cheddar", "mozzarella cheese": "mozzarella",
     "feta cheese": "feta", "heavy cream": "cream", "heavy whipping cream": "cream", "whipping cream": "cream",
-    "diced tomatoes": "canned tomatoes", "crushed tomatoes": "canned tomatoes", "canned diced tomatoes": "canned tomatoes",
-    "whole tomatoes": "canned tomatoes", "tomatoes": "tomato", "roma tomatoes": "tomato", "plum tomatoes": "tomato",
+    "diced tomatoes": "canned tomato", "crushed tomatoes": "canned tomato", "canned diced tomatoes": "canned tomato",
+    "whole tomatoes": "canned tomato", "tomatoes": "tomato", "roma tomatoes": "tomato", "plum tomatoes": "tomato",
     "soya sauce": "soy sauce", "low sodium soy sauce": "soy sauce", "fresh ginger": "ginger", "ginger root": "ginger",
     "lemon juice": "lemon", "fresh lemon juice": "lemon", "lime juice": "lime", "fresh lime juice": "lime",
     "fresh parsley": "parsley", "flat-leaf parsley": "parsley", "fresh basil": "basil", "fresh cilantro": "cilantro",
@@ -51,6 +53,22 @@ ALIASES = {
     "red pepper flakes": "chili flakes", "crushed red pepper": "chili flakes", "red bell pepper": "bell pepper",
     "green bell pepper": "bell pepper", "yellow bell pepper": "bell pepper", "greek yogurt": "yogurt",
     "plain yogurt": "yogurt", "natural yogurt": "yogurt", "white rice": "rice", "long-grain rice": "rice",
+    "ground cinnamon": "cinnamon", "ground cumin": "cumin", "ground ginger": "ginger", "ground clove": "clove",
+    "ground cloves": "clove", "ground nutmeg": "nutmeg", "ground pepper": "black pepper", "white pepper": "black pepper",
+    "cracked black pepper": "black pepper", "green pepper": "bell pepper", "green chily": "green chile",
+    "green chilies": "green chile", "chili flakes": "chili flake", "chili flake": "chili flake",
+    "red pepper flakes": "chili flake", "crushed red pepper flakes": "chili flake", "crushed red pepper flake": "chili flake",
+    "chicken breast halve": "chicken breast", "chicken breast halves": "chicken breast", "bay leave": "bay leaf",
+    "bay leaves": "bay leaf", "confectioners' sugar": "powdered sugar", "confectioners sugar": "powdered sugar",
+    "icing sugar": "powdered sugar", "celery rib": "celery", "celery stalk": "celery", "parsley flake": "parsley",
+    "dill weed": "dill", "kernel corn": "corn", "sweet onion": "onion", "bread flour": "flour", "wheat flour": "flour",
+    "unbleached flour": "flour", "cayenne pepper": "cayenne", "white vinegar": "vinegar", "distilled white vinegar": "vinegar",
+    "salt and pepper": "salt", "seasoning salt": "salt", "dry white wine": "white wine", "dry red wine": "red wine",
+    "cooked rice": "rice", "brown rice": "rice", "scallion": "green onion", "chicken breast half": "chicken breast",
+    "boneless chicken thighs": "chicken thigh", "chicken thigh": "chicken thigh", "chocolate chips": "chocolate chip",
+    "semi-sweet chocolate chips": "chocolate chip", "semisweet chocolate chips": "chocolate chip",
+    "tomato puree": "tomato sauce", "unsweetened cocoa powder": "cocoa powder", "unsweetened cocoa": "cocoa powder",
+    "cocoa": "cocoa powder", "sour cream": "sour cream", "cream cheese": "cream cheese",
     "basmati rice": "rice", "jasmine rice": "rice", "spaghetti pasta": "spaghetti", "maple syrup": "maple syrup",
 }
 DESCRIPTORS = re.compile(
@@ -58,137 +76,203 @@ DESCRIPTORS = re.compile(
     r"extra|virgin|low-sodium|reduced-sodium|lowfat|low-fat|nonfat|fat-free|fat free|whole|cooked|frozen|"
     r"finely|roughly|ripe|organic|lean|dried|optional|packed|room temperature|softened|melted|shredded|grated)\b")
 
-TAG_CUISINE = {
-    "italian": "italian", "mexican": "mexican", "indian": "indian", "chinese": "chinese", "thai": "thai",
-    "japanese": "japanese", "korean": "korean", "french": "french", "greek": "greek", "spanish": "spanish",
-    "middle-eastern": "middle-eastern", "moroccan": "middle-eastern", "lebanese": "middle-eastern",
-    "american": "american", "southern-united-states": "american", "southwestern-united-states": "american",
-    "north-american": "american", "cajun": "american", "german": "german", "british": "british",
-    "english": "british", "vietnamese": "vietnamese", "caribbean": "caribbean", "brazilian": "latin-american",
-    "asian": "asian",
+CUISINE_KW = {
+    "italian": "italian", "mexican": "mexican", "tex mex": "mexican", "indian": "indian", "chinese": "chinese",
+    "thai": "thai", "japanese": "japanese", "korean": "korean", "french": "french", "greek": "greek",
+    "spanish": "spanish", "middle eastern": "middle-eastern", "moroccan": "middle-eastern", "lebanese": "middle-eastern",
+    "turkish": "middle-eastern", "german": "german", "british": "british", "english": "british", "scottish": "british",
+    "irish": "british", "vietnamese": "vietnamese", "caribbean": "caribbean", "cuban": "caribbean", "african": "african",
+    "brazilian": "latin-american", "peruvian": "latin-american", "south american": "latin-american",
+    "southern u.s.": "american", "southwestern u.s.": "american", "northeastern u.s.": "american",
+    "midwest": "american", "pacific northwest": "american", "cajun": "american", "creole": "american",
+    "hawaiian": "american", "amish": "american", "canadian": "american", "asian": "asian", "european": "european",
+    "polish": "european", "russian": "european", "hungarian": "european", "scandinavian": "european",
+    "swiss": "european", "portuguese": "european", "dutch": "european", "austrian": "european", "australian": "american",
 }
-TAG_MEAL = {
-    "breakfast": "breakfast", "brunch": "breakfast", "lunch": "lunch", "main-dish": "dinner", "dinner-party": "dinner",
-    "desserts": "dessert", "dessert": "dessert", "snacks": "snack", "appetizers": "snack", "side-dishes": "side",
-    "soups-stews": "soup", "soup": "soup", "salads": "salad", "salad": "salad",
-}
-EXCLUDE_TAGS = {"beverages", "cocktails", "smoothies", "drinks"}
+SPECIFIC_FIRST = ["italian", "mexican", "indian", "chinese", "thai", "japanese", "korean", "french", "greek", "spanish"]
+DESSERT_CATS = {"dessert", "bar cookie", "drop cookies", "cookie & brownie", "pie", "candy", "cheesecake",
+                "frozen desserts", "cake", "brownies", "pies", "tarts", "custards", "sweet"}
+BREAD_CATS = {"breads", "quick breads", "yeast breads", "bread machine", "scones", "muffins", "biscuits"}
+SIDE_CATS = {"vegetable", "potato", "rice", "beans", "corn", "onions", "greens", "grains", "pasta shells", "spaghetti"}
+EXCLUDE_CATS = {"beverages", "smoothies", "punch beverage", "cocktails", "coffee beverages", "tea", "shakes", "candy"}
+EXCLUDE_KW = {"beverages", "smoothies", "cocktails", "drinks"}
+GENERIC_DESC = re.compile(r"^make and share this .* recipe from food\.com\.?$", re.I)
+
+CHEESES = ("cheddar", "parmesan", "mozzarella", "feta", "swiss", "provolone", "ricotta", "goat", "blue",
+           "monterey jack", "gruyere", "pepper jack", "gouda", "brie")
+EXTRA_DESCRIPTORS = re.compile(r"\b(sharp|mild|extra-sharp|good quality|plain|fine|coarse|light|dark|good|nonfat|lowfat|"
+                               r"reduced fat|reduced-fat|low sodium|hot|warm|cold|boiling|thinly|thick)\b")
+
+
+def r_vector(s):
+    """Parse an R vector literal: c("a", NA, "b") or a bare "a" or NA."""
+    s = (s or "").strip()
+    if not s or s == "NA":
+        return []
+    out = []
+    for m in re.finditer(r'"((?:[^"\\]|\\.)*)"|\bNA\b', s):
+        out.append(None if m.group(1) is None else m.group(1).replace('\\"', '"').replace("\\\\", "\\"))
+    return out
+
+
+def iso_minutes(s):
+    m = re.fullmatch(r"P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?", (s or "").strip())
+    if not m or not any(m.groups()):
+        return None
+    d, h, mi = (int(x or 0) for x in m.groups())
+    return d * 1440 + h * 60 + mi
 
 
 def canon(raw):
-    n = raw.strip().lower()
-    n = ALIASES.get(n, n)
-    n = DESCRIPTORS.sub("", n)
+    n = raw.strip().lower().split(",")[0]          # "lemons, rind of" -> "lemons"
+    n = re.sub(r"\(.*?\)", "", n)
+    n = ALIASES.get(n.strip(), n)
+    n = EXTRA_DESCRIPTORS.sub("", DESCRIPTORS.sub("", n))
     n = re.sub(r"\s+", " ", n).strip(" ,-")
     n = ALIASES.get(n, n)
     if n.endswith("ies") and len(n) > 4:
         n = n[:-3] + "y"
     elif n.endswith("oes"):
         n = n[:-2]
-    elif n.endswith("s") and not n.endswith(("ss", "us", "hummus")) and len(n) > 3:
+    elif n.endswith("s") and not n.endswith(("ss", "us", "hummus", "molasses", "asparagus")) and len(n) > 3:
         n = n[:-1]
-    return ALIASES.get(n, n)
+    n = ALIASES.get(n, n)
+    if n.endswith(" cheese") and n != "cream cheese":
+        n = next((c for c in CHEESES if c in n), n)
+    return n
 
 
-def vibes_for(minutes, difficulty, meals, tags):
+def meals_for(cat, kws):
+    c = cat.lower()
+    m = set()
+    if c in DESSERT_CATS or "dessert" in kws:
+        m.add("dessert")
+    if c in BREAD_CATS:
+        m.add("bread")
+    if c in SIDE_CATS:
+        m.add("side")
+    if c in {"breakfast", "brunch"} or "breakfast" in kws or "brunch" in kws:
+        m.add("breakfast")
+    if c in {"lunch/snacks", "sandwiches"}:
+        m |= {"lunch", "snack"}
+    if "soup" in c or "stew" in c or "chowder" in c or "chili" in c:
+        m.add("soup")
+    if "salad" in c and "dressing" not in c:
+        m.add("salad")
+    if "sauce" in c or "dressing" in c or "spread" in c:
+        m.add("sauce")
+    if c in {"one dish meal", "chicken", "chicken breast", "pork", "meat", "steak", "poultry", "curries",
+             "savory pies", "casserole", "pasta", "whole chicken", "roast beef", "lamb/sheep", "stew", "pot roast",
+             "seafood", "fish", "salmon", "lobster", "crab", "shrimp", "tuna", "meatloaf", "ham", "stir fry"} or \
+            "main dish" in kws or "one dish meal" in kws:
+        m.add("dinner")
+    return sorted(m) or ["dinner"]
+
+
+def vibes_for(minutes, difficulty, meals, kws):
     v = []
     if "breakfast" in meals:
-        v += ["sunday-morning", "breakfast-in-bed"] if difficulty != "involved" else ["sunday-morning"]
-    if minutes <= 45 and difficulty == "easy" and "dinner" in meals:
+        v.append("sunday-morning")
+        if difficulty != "involved" and minutes <= 40:
+            v.append("breakfast-in-bed")
+    if "weeknight" in kws or (minutes <= 45 and difficulty == "easy" and "dinner" in meals):
         v.append("weeknight")
-    if "lunch" in meals and minutes <= 20:
+    if "lunch" in meals and minutes <= 25:
         v.append("workday-lunch")
-    if {"romantic", "special-occasion", "elegant", "date-night"} & tags or (difficulty == "involved" and "dinner" in meals):
+    if {"romantic", "valentine's day", "elegant", "date night"} & kws or (difficulty == "involved" and "dinner" in meals and minutes <= 120):
         v.append("date-night")
-    if {"comfort-food", "one-dish-meal"} & tags or "soup" in meals:
+    if {"comfort food", "one dish meal", "stew"} & kws or "soup" in meals:
         v.append("comfort-food")
-    if {"low-calorie", "healthy", "low-fat"} & tags or "salad" in meals:
+    if {"healthy", "low fat", "very low carbs", "no cook"} & kws or "salad" in meals:
         v.append("light-and-fresh")
-    if {"crock-pot-slow-cooker", "freezer", "make-ahead"} & tags:
+    if {"freezer", "make ahead", "crock pot slow cooker"} & kws:
         v.append("meal-prep")
-    if {"for-large-groups", "kid-friendly", "potluck"} & tags:
+    if {"for large groups", "kid friendly", "potluck", "party"} & kws:
         v.append("crowd-pleaser")
+    if "inexpensive" in kws:
+        v.append("budget-friendly")
+    if {"christmas", "thanksgiving", "easter", "halloween", "4th of july", "new year"} & kws:
+        v.append("holiday")
     return v
 
 
 def title_case(s):
-    return re.sub(r"\b([a-z])([a-z']*)", lambda m: m.group(1).upper() + m.group(2), s)
+    return re.sub(r"\b([a-z])([a-z']*)", lambda m: m.group(1).upper() + m.group(2), s.lower())
 
 
 def sentence(s):
-    s = s.strip()
+    s = " ".join(s.split())
     return s[:1].upper() + s[1:]
 
 
-def load_ratings(path):
-    tot, cnt = defaultdict(float), Counter()
-    with open(path, newline="", encoding="utf-8") as f:
-        for row in csv.DictReader(f):
-            try:
-                r = float(row["rating"])
-            except ValueError:
-                continue
-            if r > 0:  # 0 means "reviewed without rating"
-                tot[row["recipe_id"]] += r
-                cnt[row["recipe_id"]] += 1
-    return {k: (tot[k] / cnt[k], cnt[k]) for k in cnt}
+def num(x):
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return None
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--recipes", required=True)
-    ap.add_argument("--interactions")
-    ap.add_argument("--limit", type=int, default=4000)
-    ap.add_argument("--min-ratings", type=int, default=5)
-    ap.add_argument("--min-rating", type=float, default=4.3)
-    ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "public/data/recipes.json"))
+    ap.add_argument("--limit", type=int, default=15000)
+    ap.add_argument("--min-reviews", type=int, default=4)
+    ap.add_argument("--min-rating", type=float, default=4.4)
+    ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "public/data"))
     a = ap.parse_args()
 
-    ratings = load_ratings(a.interactions) if a.interactions else {}
-    candidates, unmapped = [], Counter()
+    candidates = []
     with open(a.recipes, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
-            try:
-                tags = set(ast.literal_eval(row["tags"]))
-                raw_ings = ast.literal_eval(row["ingredients"])
-                steps = ast.literal_eval(row["steps"])
-                minutes = int(row["minutes"])
-            except (ValueError, SyntaxError):
+            rating, reviews = num(row["AggregatedRating"]), num(row["ReviewCount"])
+            if not rating or not reviews or reviews < a.min_reviews or rating < a.min_rating:
                 continue
-            if tags & EXCLUDE_TAGS or not (3 <= len(raw_ings) <= 16) or len(steps) < 2 or not (1 <= minutes <= 480):
+            parts, qtys, steps = r_vector(row["RecipeIngredientParts"]), r_vector(row["RecipeIngredientQuantities"]), r_vector(row["RecipeInstructions"])
+            minutes = iso_minutes(row["TotalTime"])
+            cat = (row["RecipeCategory"] or "").strip()
+            kws = {k.lower() for k in r_vector(row["Keywords"]) if k}
+            if not minutes or not (3 <= len(parts) <= 18) or len(steps) < 2 or cat.lower() in EXCLUDE_CATS or kws & EXCLUDE_KW:
                 continue
-            avg, n = ratings.get(row["id"], (None, 0))
-            if ratings and (n < a.min_ratings or avg < a.min_rating):
-                continue
-            candidates.append((n, avg, row, tags, raw_ings, steps, minutes))
+            candidates.append((reviews, rating, row, parts, qtys, steps, minutes, cat, kws))
 
-    candidates.sort(key=lambda c: (c[0], c[1] or 0), reverse=True)
-    out = []
-    for n, avg, row, tags, raw_ings, steps, minutes in candidates[: a.limit]:
-        names = list(dict.fromkeys(canon(i) for i in raw_ings if canon(i)))
-        meals = sorted({TAG_MEAL[t] for t in tags if t in TAG_MEAL}) or ["dinner"]
-        cuisine = next((TAG_CUISINE[t] for t in tags if t in TAG_CUISINE), "other")
+    candidates.sort(key=lambda c: (c[0], c[1]), reverse=True)
+    out, freq = [], Counter()
+    for reviews, rating, row, parts, qtys, steps, minutes, cat, kws in candidates[: a.limit]:
+        aligned = len(qtys) == len(parts)
+        ings, seen = [], set()
+        for i, raw in enumerate(parts):
+            if not raw:
+                continue
+            name = canon(raw)
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            q = qtys[i] if aligned and qtys[i] else None
+            ings.append({"name": name, "text": raw.strip(), **({"qty": q} if q else {})})
+            freq[name] += 1
+        names = [i["name"] for i in ings]
+        meals = meals_for(cat, kws)
+        cuisines = [CUISINE_KW[k] for k in kws if k in CUISINE_KW]
+        cuisine = next((c for c in SPECIFIC_FIRST if c in cuisines), cuisines[0] if cuisines else "other")
         diff = infer_difficulty(minutes, len(steps), len(names))
-        slug = re.sub(r"[^a-z0-9]+", "-", row["name"].lower()).strip("-")
+        slug = re.sub(r"[^a-z0-9]+", "-", row["Name"].lower()).strip("-")
+        desc = " ".join((row["Description"] or "").split())
+        servings = num(row["RecipeServings"])
         out.append({
-            "id": f"f-{row['id']}", "title": title_case(" ".join(row["name"].split())),
-            "description": (row.get("description") or "").strip()[:280] or None,
+            "id": f"f-{int(row['RecipeId'])}", "title": title_case(" ".join(row["Name"].split())),
+            "description": None if not desc or desc == "NA" or GENERIC_DESC.match(desc) else desc[:280],
             "cuisine": cuisine, "minutes": minutes, "difficulty": diff, "meals": meals,
-            "vibes": vibes_for(minutes, diff, meals, tags), "diets": infer_diets(names),
-            "main": infer_main(names), "rating": round(avg, 2) if avg else None, "ratingCount": n or None,
-            "ingredients": [{"name": x, "text": x.capitalize()} for x in names],
-            "steps": [sentence(s) for s in steps],
-            "source": {"name": "Food.com", "url": f"https://www.food.com/recipe/{slug}-{row['id']}"},
+            "vibes": vibes_for(minutes, diff, meals, kws), "diets": infer_diets(names),
+            "main": infer_main(names), "servings": int(servings) if servings else None,
+            "rating": round(rating, 2), "ratingCount": int(reviews),
+            "ingredients": ings, "steps": [sentence(s) for s in steps if s],
+            "source": {"name": "Food.com", "url": f"https://www.food.com/recipe/{slug}-{int(row['RecipeId'])}"},
         })
-        for raw in raw_ings:
-            if canon(raw) == raw.strip().lower():
-                unmapped[raw.strip().lower()] += 1
 
-    Path(a.out).write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
-    print(f"wrote {len(out)} recipes -> {a.out}")
-    print("top ingredient names passed through unchanged (extend ALIASES if any are variants):")
-    for name, c in unmapped.most_common(40):
-        print(f"  {c:5d}  {name}")
+    n = write_dataset(out, a.out)
+    print(f"{len(candidates)} passed filters; wrote {n} recipes -> {a.out}")
+    print("most common canonical ingredients (check for un-merged variants):")
+    print(", ".join(f"{n}({c})" for n, c in freq.most_common(150)))
 
 
 if __name__ == "__main__":

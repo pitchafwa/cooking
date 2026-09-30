@@ -3,14 +3,18 @@ export type Difficulty = 'easy' | 'medium' | 'involved';
 export interface Ingredient {
   /** canonical name, matched against the pantry */
   name: string;
-  /** display text, e.g. "2 cloves garlic" */
+  /** display text from the source, e.g. "garlic cloves" */
   text: string;
+  /** quantity from the source (no units in the dataset), e.g. "1 1/2" */
+  qty?: string;
 }
 
+/** Slim record from the search index (recipes.json). */
 export interface Recipe {
   id: string;
   title: string;
-  description?: string | null;
+  /** shard number for fetching RecipeDetailData */
+  b: number;
   cuisine: string;
   minutes: number;
   difficulty: Difficulty;
@@ -18,10 +22,17 @@ export interface Recipe {
   vibes: string[];
   diets: string[];
   main: string;
-  servings?: number;
   rating?: number | null;
   ratingCount?: number | null;
+  /** names only at index time; text/qty arrive with the details */
   ingredients: Ingredient[];
+}
+
+/** Lazily fetched from details/<b>.json when a recipe opens. */
+export interface RecipeDetailData {
   steps: string[];
+  ings: { text: string; qty?: string }[];
+  description?: string;
+  servings?: number;
   source: { name: string; url?: string };
 }

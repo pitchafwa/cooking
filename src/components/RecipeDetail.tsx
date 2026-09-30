@@ -1,4 +1,6 @@
-import { recipes } from '../data';
+import { useEffect, useState } from 'preact/hooks';
+import { recipes, fetchDetail } from '../data';
+import type { RecipeDetailData } from '../types';
 import { onHand } from '../match';
 import { Heart, fmtTime } from './RecipeCard';
 
@@ -6,6 +8,12 @@ const nyt = (q: string) => `https://cooking.nytimes.com/search?q=${encodeURIComp
 
 export function RecipeDetail({ id }: { id: string }) {
   const r = recipes.value.find((x) => x.id === id);
+  const [d, setD] = useState<RecipeDetailData | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setD(null); setFailed(false);
+    if (r) fetchDetail(r).then(setD).catch(() => setFailed(true));
+  }, [id]);
   if (!r) return <p class="empty">Recipe not found. <a href="#/recipes">Back to recipes</a></p>;
   const have = onHand.value;
   const missing = r.ingredients.filter((i) => !have.has(i.name)).length;
@@ -21,10 +29,10 @@ export function RecipeDetail({ id }: { id: string }) {
       </div>
       <p class="meta">
         {title(r.cuisine)} · {fmtTime(r.minutes)} · {title(r.difficulty)}
-        {r.servings ? ` · serves ${r.servings}` : ''}
+        {d?.servings ? ` · serves ${d.servings}` : ''}
         {r.rating ? ` · ★ ${r.rating.toFixed(1)}` : ''}
       </p>
-      {r.description && <p class="desc">{r.description}</p>}
+      {d?.description && <p class="desc">{d.description}</p>}
       <div class="tags">
         {[...r.diets, ...r.vibes].map((t) => <span key={t} class="tag">{cap(t)}</span>)}
       </div>
@@ -32,17 +40,20 @@ export function RecipeDetail({ id }: { id: string }) {
       <div class="cols">
         <section>
           <h2>Ingredients <span class={`pill ${missing ? 'close' : 'ready'}`}>{missing ? `${missing} missing` : 'all on hand ✓'}</span></h2>
+          {d?.ings.some((i) => i.qty) && <p class="note">Amounts show the number only — units are in the method.</p>}
           <ul class="ings">
-            {r.ingredients.map((i) => (
+            {r.ingredients.map((i, n) => (
               <li key={i.name} class={have.has(i.name) ? 'have' : 'lack'}>
-                <span aria-hidden="true">{have.has(i.name) ? '✓' : '○'}</span> {i.text}
+                <span aria-hidden="true">{have.has(i.name) ? '✓' : '○'}</span> {d?.ings[n]?.qty && <b class="qty">{d.ings[n].qty}</b>} {d?.ings[n]?.text ?? i.name}
               </li>
             ))}
           </ul>
         </section>
         <section>
           <h2>Method</h2>
-          <ol class="steps">{r.steps.map((s, n) => <li key={n}>{s}</li>)}</ol>
+          {failed ? <p class="empty">Couldn't load the method. Check your connection.</p>
+            : !d ? <p class="empty">Loading…</p>
+            : <ol class="steps">{d.steps.map((s, n) => <li key={n}>{s}</li>)}</ol>}
         </section>
       </div>
 
@@ -54,7 +65,7 @@ export function RecipeDetail({ id }: { id: string }) {
           <a href={`https://www.seriouseats.com/search?q=${encodeURIComponent(r.title)}`} target="_blank" rel="noopener">Serious Eats ↗</a>
         </p>
         <p class="src">
-          Source: {r.source.url ? <a href={r.source.url} target="_blank" rel="noopener">{r.source.name}</a> : r.source.name}
+          {d && <>Source: {d.source.url ? <a href={d.source.url} target="_blank" rel="noopener">{d.source.name}</a> : d.source.name}</>}
         </p>
       </section>
     </article>

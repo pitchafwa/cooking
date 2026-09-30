@@ -3,9 +3,9 @@
 Stand-in while the Food.com data is unavailable; the output schema is identical
 to build_recipes.py. All recipes here are original, simple house recipes.
 """
-import json
 from pathlib import Path
 from taxonomy import infer_diets, infer_main, infer_difficulty
+from dataset_io import write_dataset
 
 SRC = {"name": "Cooking Hub sample recipe"}
 
@@ -144,6 +144,5 @@ RECIPES = [
       ["Sauté sliced mushrooms in butter; set aside.", "Pour in beaten eggs, cook until barely set.", "Add mushrooms and cheese, fold over."], 4.3),
 ]
 
-out = Path(__file__).resolve().parent.parent / "public" / "data" / "recipes.json"
-out.write_text(json.dumps(RECIPES, ensure_ascii=False, separators=(",", ":")))
-print(f"wrote {len(RECIPES)} recipes -> {out}")
+out = Path(__file__).resolve().parent.parent / "public" / "data"
+print(f"wrote {write_dataset(RECIPES, out)} recipes -> {out}")

@@ -91,3 +91,6 @@ input:focus, select:focus, button:focus-visible, a:focus-visible { outline: 3px 
 .foot { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 40px; }
 @media (max-width: 520px) { .tabs { width: 100%; justify-content: space-between; } .tab { padding: 7px 9px; font-size: .86rem; } .page-title { font-size: 1.6rem; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+.qty { color: var(--rose); margin-right: 2px; }
+.note { font-size: .8rem; color: var(--muted); margin: 0 0 6px; }
+.more { text-align: center; margin-top: 20px; }

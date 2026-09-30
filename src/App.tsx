@@ -42,9 +42,7 @@ export function App() {
       <main>{page}</main>
       <footer class="foot">
         {recipes.value.length} recipes
-        {recipes.value.some((r) => r.source.name === 'Food.com') && (
-          <> · Recipe data from <a href="https://www.food.com" target="_blank" rel="noopener">Food.com</a> (CC BY-NC-SA 4.0)</>
-        )}
+         · Recipes courtesy of <a href="https://www.food.com" target="_blank" rel="noopener">Food.com</a> members
       </footer>
     </div>
   );
