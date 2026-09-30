@@ -33,3 +33,8 @@ def write_dataset(recipes, data_dir):
     for b, d in shards.items():
         (data_dir / "details" / f"{b}.json").write_text(dump(d))
     return len(index)
+
+
+def write_canon(data_dir, rules):
+    """Ship the ingredient-name rules so the pantry normalizes typed names like the pipeline does."""
+    (Path(data_dir) / "canon.json").write_text(json.dumps(rules, separators=(",", ":")))

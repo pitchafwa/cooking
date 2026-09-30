@@ -1,5 +1,6 @@
 import { signal } from '@preact/signals';
 import type { Recipe, RecipeDetailData } from './types';
+import { setCanonRules } from './ingredients';
 
 export const recipes = signal<Recipe[]>([]);
 export const loadState = signal<'loading' | 'ready' | 'error'>('loading');
@@ -7,6 +8,7 @@ export const loadState = signal<'loading' | 'ready' | 'error'>('loading');
 const url = (p: string) => `${import.meta.env.BASE_URL}data/${p}`;
 
 export async function loadRecipes() {
+  fetch(url('canon.json')).then((r) => r.json()).then(setCanonRules).catch(() => { /* typed names just skip alias rules */ });
   try {
     const res = await fetch(url('recipes.json'));
     if (!res.ok) throw new Error(String(res.status));

@@ -94,3 +94,17 @@ input:focus, select:focus, button:focus-visible, a:focus-visible { outline: 3px 
 .qty { color: var(--rose); margin-right: 2px; }
 .note { font-size: .8rem; color: var(--muted); margin: 0 0 6px; }
 .more { text-align: center; margin-top: 20px; }
+.quick { margin: 4px 0 14px; } .linkish { border: 0; background: none; color: var(--lav-deep); font-weight: 700; cursor: pointer; padding: 4px 0; font-size: .9rem; }
+.quick .chipset { margin-top: 8px; }
+.hint { color: var(--muted); font-size: .85rem; }
+.aisle h2 { font-size: 1.05rem; margin: 20px 0 8px; } .aisle h2 small { color: var(--muted); font-weight: 400; font-family: 'Nunito', sans-serif; }
+.chip .tog { background: transparent; padding: 3px 6px; font-size: .95rem; opacity: .4; }
+.chip .tog[aria-pressed=true] { opacity: 1; background: var(--peach); }
+.chip.soon { border-color: var(--peach); }
+.toggle { display: block; font-size: .85rem; color: var(--muted); margin: 0 4px 12px; }
+.focus { background: var(--lav); border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.focus .btn { padding: 6px 14px; box-shadow: none; }
+.buy { background: var(--card); border-radius: var(--radius); padding: 14px 18px; box-shadow: var(--shadow); margin: 0 0 14px; border: 2px solid #fff; }
+.buy h2 { font-size: 1.1rem; margin: 0 0 6px; } .buy .sub { margin: 10px 0 6px; font-size: .85rem; } .plan { margin: 0; }
+.buychip { border-color: var(--sage); background: #f4faf4; } .buychip b { color: var(--sage-deep); } .tier { color: var(--muted); font-size: .75rem; }
+.soon-note { margin: 0; font-size: .82rem; color: var(--peach-deep); }

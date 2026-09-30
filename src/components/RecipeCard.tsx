@@ -19,7 +19,7 @@ export function Heart({ id }: { id: string }) {
   );
 }
 
-export function RecipeCard({ r, have }: { r: Recipe; have: Set<string> }) {
+export function RecipeCard({ r, have, soon = [] }: { r: Recipe; have: Set<string>; soon?: string[] }) {
   const a = availability(r, have);
   return (
     <a class="card" href={`#/recipe/${r.id}`}>
@@ -30,6 +30,7 @@ export function RecipeCard({ r, have }: { r: Recipe; have: Set<string> }) {
       {a.missing.length > 0 && a.missing.length <= 3 && (
         <p class="missing">Missing: {a.missing.map((m) => m.name).join(', ')}</p>
       )}
+      {soon.length > 0 && <p class="soon-note">⏳ Uses up: {soon.join(', ')}</p>}
       <div class="tags">
         {r.diets.filter((d) => ['vegan', 'vegetarian', 'gluten-free'].includes(d)).slice(0, 2).map((d) => <span key={d} class="tag">{cap(d)}</span>)}
         {r.rating ? <span class="tag star">★ {r.rating.toFixed(1)}</span> : null}

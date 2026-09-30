@@ -24,6 +24,9 @@ Keeps well-rated recipes (>=4 reviews, >=4.4 stars), normalizes ingredient names
 `scripts/build_recipes.py`), and infers cuisine/diet/vibe/difficulty tags (`scripts/taxonomy.py`).
 Known limits of the source: quantities have no units, and only line up with ingredients for ~30% of recipes.
 
+After changing ingredient rules in either `scripts/build_recipes.py` or `src/ingredients.ts`, run
+`python3 scripts/check_canon_parity.py` to confirm the pipeline and the browser normalize names identically.
+
 `npm run data:sample` overwrites the data with a tiny 38-recipe fixture (handy for offline work).
 
 ## Deploy
@@ -31,4 +34,7 @@ Repo Settings → Pages → Source: **GitHub Actions**. Pushes to `main` (and th
 
 ## Status
 Phase 1 done (browse, fuzzy search, filters, pantry-aware badges, basic pantry, favorites, recipe detail) on 15k Food.com recipes.
-See the project plan in the chat history for phases 2–5 (smarter recommendations, grocery list, cloud sync, polish).
+Phase 2 done: typed names are normalized ("Eggs" -> egg), owning cheddar covers "cheese" (and similar substitutions),
+pantry grouped by aisle with quick-add and "use soon" flags, a "worth picking up" panel (best single item / best 3-item
+trip to unlock recipes), and a skip-pricey-extras toggle.
+Next: grocery list (3), cloud sync (4), polish (5).

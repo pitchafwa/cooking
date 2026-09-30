@@ -18,7 +18,7 @@ import argparse, ast, csv, json, re, sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from taxonomy import infer_diets, infer_main, infer_difficulty
-from dataset_io import write_dataset
+from dataset_io import write_dataset, write_canon
 
 csv.field_size_limit(sys.maxsize)
 
@@ -69,12 +69,27 @@ ALIASES = {
     "semi-sweet chocolate chips": "chocolate chip", "semisweet chocolate chips": "chocolate chip",
     "tomato puree": "tomato sauce", "unsweetened cocoa powder": "cocoa powder", "unsweetened cocoa": "cocoa powder",
     "cocoa": "cocoa powder", "sour cream": "sour cream", "cream cheese": "cream cheese",
+    "sun-dried tomatoes": "sun-dried tomato", "sun dried tomatoes": "sun-dried tomato", "sun-dried tomato": "sun-dried tomato",
+    "garbanzo beans": "chickpea", "garbanzo bean": "chickpea", "gingerroot": "ginger", "catsup": "ketchup", "soymilk": "soy milk",
+    "half-and-half cream": "half-and-half", "unsweetened applesauce": "applesauce", "white bread flour": "flour",
+    "self raising flour": "self-rising flour", "self-raising flour": "self-rising flour", "cornflour": "cornstarch",
+    "old fashioned oats": "oat", "old-fashioned oats": "oat", "quick oats": "oat", "quick-cooking oats": "oat", "quick oat": "oat",
+    "rolled oat": "oat", "old fashioned oat": "oat", "ground cayenne pepper": "cayenne", "flat leaf parsley": "parsley",
+    "italian parsley": "parsley", "apple cider vinegar": "cider vinegar", "creamy peanut butter": "peanut butter",
+    "crunchy peanut butter": "peanut butter", "chunky peanut butter": "peanut butter", "velveeta cheese": "american cheese",
+    "egg substitute": "egg", "sherry wine": "sherry", "pepper": "black pepper",
     "basmati rice": "rice", "jasmine rice": "rice", "spaghetti pasta": "spaghetti", "maple syrup": "maple syrup",
 }
-DESCRIPTORS = re.compile(
-    r"\b(fresh|freshly|large|small|medium|chopped|minced|diced|sliced|boneless|skinless|unsalted|salted|"
-    r"extra|virgin|low-sodium|reduced-sodium|lowfat|low-fat|nonfat|fat-free|fat free|whole|cooked|frozen|"
-    r"finely|roughly|ripe|organic|lean|dried|optional|packed|room temperature|softened|melted|shredded|grated)\b")
+DESCRIPTOR_WORDS = [
+    "fresh", "freshly", "large", "small", "medium", "chopped", "minced", "diced", "sliced", "boneless", "skinless",
+    "unsalted", "salted", "extra", "virgin", "low-sodium", "reduced-sodium", "lowfat", "low-fat", "nonfat", "fat-free",
+    "fat free", "whole", "cooked", "frozen", "finely", "roughly", "ripe", "organic", "lean", "dried", "optional", "packed",
+    "room temperature", "softened", "melted", "shredded", "grated", "sharp", "mild", "extra-sharp", "good quality",
+    "plain", "fine", "coarse", "light", "dark", "good", "reduced fat", "reduced-fat", "low sodium", "hot", "warm",
+    "cold", "boiling", "thinly", "thick", "crumbled", "unbleached", "all-purpose", "all purpose",
+]
+DESCRIPTORS = re.compile(r"\b(" + "|".join(re.escape(w) for w in DESCRIPTOR_WORDS) + r")\b")
+EXTRA_DESCRIPTORS = re.compile(r"(?!)")  # merged into DESCRIPTOR_WORDS; kept so canon() stays readable
 
 CUISINE_KW = {
     "italian": "italian", "mexican": "mexican", "tex mex": "mexican", "indian": "indian", "chinese": "chinese",
@@ -98,10 +113,15 @@ EXCLUDE_CATS = {"beverages", "smoothies", "punch beverage", "cocktails", "coffee
 EXCLUDE_KW = {"beverages", "smoothies", "cocktails", "drinks"}
 GENERIC_DESC = re.compile(r"^make and share this .* recipe from food\.com\.?$", re.I)
 
-CHEESES = ("cheddar", "parmesan", "mozzarella", "feta", "swiss", "provolone", "ricotta", "goat", "blue",
-           "monterey jack", "gruyere", "pepper jack", "gouda", "brie")
-EXTRA_DESCRIPTORS = re.compile(r"\b(sharp|mild|extra-sharp|good quality|plain|fine|coarse|light|dark|good|nonfat|lowfat|"
-                               r"reduced fat|reduced-fat|low sodium|hot|warm|cold|boiling|thinly|thick)\b")
+CHEESES = ("cheddar", "parmesan", "mozzarella", "feta", "swiss", "provolone", "ricotta", "goat", "blue cheese",
+           "monterey jack", "gruyere", "pepper jack", "gouda", "brie", "romano", "asiago", "colby", "havarti", "muenster")
+HERBS = ("basil", "thyme", "oregano", "cilantro", "parsley", "mint", "sage", "tarragon", "dill", "rosemary", "chive")
+STRIP_SUFFIXES = ("floret", "halve", "fillet")
+RICE_HEADS = ("long grain", "long-grain", "white", "brown", "basmati", "jasmine", "cooked", "instant", "converted",
+              "long grain white", "long-grain white", "long-grain brown", "parboiled", "wild")
+CITRUS = ("lemon", "lime", "orange")
+CITRUS_PARTS = ("zest", "rind", "peel", "wedge", "slice", "juice")
+POTATO_SKIP = ("sweet", "mashed", "instant", "starch")
 
 
 def r_vector(s):
@@ -124,12 +144,16 @@ def iso_minutes(s):
 
 
 def canon(raw):
-    n = raw.strip().lower().split(",")[0]          # "lemons, rind of" -> "lemons"
-    n = re.sub(r"\(.*?\)", "", n)
-    n = ALIASES.get(n.strip(), n)
-    n = EXTRA_DESCRIPTORS.sub("", DESCRIPTORS.sub("", n))
-    n = re.sub(r"\s+", " ", n).strip(" ,-")
-    n = ALIASES.get(n, n)
+    n = re.sub(r"\(.*?\)", "", raw.strip().lower().split(",")[0]).strip()
+    hit = ALIASES.get(n)
+    if hit is None:
+        n = re.sub(r"\s+", " ", DESCRIPTORS.sub("", n)).strip(" ,-")
+        hit = ALIASES.get(n)
+    n = hit if hit is not None else n
+    n = re.sub(r"chilies$", "chile", n)
+    m = re.fullmatch(r"(\w+) (?:leaves|leave|leaf)", n)
+    if m and m.group(1) in HERBS:
+        n = m.group(1)
     if n.endswith("ies") and len(n) > 4:
         n = n[:-3] + "y"
     elif n.endswith("oes"):
@@ -137,8 +161,21 @@ def canon(raw):
     elif n.endswith("s") and not n.endswith(("ss", "us", "hummus", "molasses", "asparagus")) and len(n) > 3:
         n = n[:-1]
     n = ALIASES.get(n, n)
+    words = n.split(" ")
+    if len(words) > 1 and words[-1] in STRIP_SUFFIXES:
+        n = " ".join(words[:-1])
+    if n.endswith(" pasta") and n != "pasta":
+        n = n[: -len(" pasta")]
+    m = re.fullmatch(r"(.+) rice", n)
+    if m and m.group(1) in RICE_HEADS:
+        n = "rice"
+    m = re.fullmatch(r"(lemon|lime|orange) (?:zest|rind|peel|wedge|slice|juice)", n)
+    if m:
+        n = m.group(1)
+    if n.endswith(" potato") and not any(w in n for w in POTATO_SKIP):
+        n = "potato"
     if n.endswith(" cheese") and n != "cream cheese":
-        n = next((c for c in CHEESES if c in n), n)
+        n = next((c for c in CHEESES if c.replace(" cheese", "") in n), n)
     return n
 
 
@@ -216,6 +253,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--recipes", required=True)
     ap.add_argument("--limit", type=int, default=15000)
+    ap.add_argument("--top", type=int, default=150, help="how many common ingredient names to print")
     ap.add_argument("--min-reviews", type=int, default=4)
     ap.add_argument("--min-rating", type=float, default=4.4)
     ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "public/data"))
@@ -270,9 +308,10 @@ def main():
         })
 
     n = write_dataset(out, a.out)
+    write_canon(a.out, {"aliases": ALIASES, "descriptors": DESCRIPTOR_WORDS, "cheeses": list(CHEESES), "herbs": list(HERBS), "stripSuffixes": list(STRIP_SUFFIXES), "riceHeads": list(RICE_HEADS), "potatoSkip": list(POTATO_SKIP)})
     print(f"{len(candidates)} passed filters; wrote {n} recipes -> {a.out}")
     print("most common canonical ingredients (check for un-merged variants):")
-    print(", ".join(f"{n}({c})" for n, c in freq.most_common(150)))
+    print(", ".join(f"{n}({c})" for n, c in freq.most_common(a.top)))
 
 
 if __name__ == "__main__":
