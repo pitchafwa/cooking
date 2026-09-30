@@ -27,7 +27,7 @@ Known limits of the source: quantities have no units, and only line up with ingr
 `npm run data:sample` overwrites the data with a tiny 38-recipe fixture (handy for offline work).
 
 ## Deploy
-Repo Settings → Pages → Source: **GitHub Actions**. Pushes to `main` deploy automatically.
+Repo Settings → Pages → Source: **GitHub Actions**. Pushes to `main` (and the current dev branch) deploy automatically.
 
 ## Status
 Phase 1 done (browse, fuzzy search, filters, pantry-aware badges, basic pantry, favorites, recipe detail) on 15k Food.com recipes.

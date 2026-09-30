@@ -1,7 +1,7 @@
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: [main]
+    branches: [main, claude/upbeat-goodall-ef6uc3]
   workflow_dispatch:
 permissions:
   contents: read
