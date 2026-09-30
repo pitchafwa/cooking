@@ -1,5 +1,5 @@
 import { computed } from '@preact/signals';
-import type { Ingredient, Recipe } from './types';
+import type { Recipe } from './types';
 import { recipes } from './data';
 import { pantry, useSoon, assumeStaples, DEFAULT_STAPLES } from './store';
 import { generalizations, costTier } from './ingredients';
@@ -19,7 +19,7 @@ export const onHand = computed(() => {
 export const missingById = computed(() => {
   const have = onHand.value;
   const m = new Map<string, string[]>();
-  for (const r of recipes.value) m.set(r.id, r.ingredients.filter((i) => !have.has(i.name)).map((i) => i.name));
+  for (const r of recipes.value) m.set(r.id, r.ings.filter((n) => !have.has(n)));
   return m;
 });
 
@@ -31,12 +31,12 @@ export const soonCovers = computed(() => {
 });
 
 export const soonUsed = (r: Recipe, covers: Map<string, string>): string[] =>
-  [...new Set(r.ingredients.map((i) => covers.get(i.name)).filter((x): x is string => !!x))];
+  [...new Set(r.ings.map((n) => covers.get(n)).filter((x): x is string => !!x))];
 
-export const missingFor = (r: Recipe, have: Set<string>): Ingredient[] => r.ingredients.filter((i) => !have.has(i.name));
+export const missingFor = (r: Recipe, have: Set<string>): string[] => r.ings.filter((n) => !have.has(n));
 
 export interface Availability {
-  missing: Ingredient[];
+  missing: string[];
   label: string;
   tone: 'ready' | 'close' | 'far';
 }

@@ -1,11 +1,20 @@
 import { signal, computed, effect } from '@preact/signals';
+import type { Recipe } from '../types';
 import { recipes } from '../data';
 import { favorites, pantry, useSoon } from '../store';
 import { onHand, missingById, soonCovers, soonUsed, hasPricey, suggestPurchases, isBaking } from '../match';
 import { searchRecipes } from '../search';
 import { RecipeCard } from './RecipeCard';
 
+/** what the user has typed (immediate) vs. what drives the search (debounced) */
+const typed = signal('');
 const query = signal('');
+let debounce: ReturnType<typeof setTimeout> | undefined;
+const setTyped = (v: string) => {
+  typed.value = v;
+  clearTimeout(debounce);
+  debounce = setTimeout(() => (query.value = v), v ? 140 : 0);
+};
 const cuisine = signal('');
 const meal = signal('');
 const main = signal('');
@@ -30,8 +39,12 @@ effect(() => {
 });
 
 const pretty = (s: string) => s.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
-const options = (pick: (r: (typeof recipes.value)[number]) => string | string[]) =>
-  [...new Set(recipes.value.flatMap((r) => [pick(r)].flat()))].filter(Boolean).sort();
+const optionsOf = (pick: (r: Recipe) => string | string[]) =>
+  computed(() => [...new Set(recipes.value.flatMap((r) => [pick(r)].flat()))].filter(Boolean).sort());
+const cuisineOpts = optionsOf((r) => r.cuisine);
+const mealOpts = optionsOf((r) => r.meals);
+const mainOpts = optionsOf((r) => r.main);
+const vibeOpts = optionsOf((r) => r.vibes);
 
 const toggle = (s: typeof vibes, v: string) => (s.value = s.value.includes(v) ? s.value.filter((x) => x !== v) : [...s.value, v]);
 const activeCount = computed(() =>
@@ -43,6 +56,52 @@ function reset() {
   cuisine.value = meal.value = main.value = difficulty.value = '';
   maxTime.value = 0; vibes.value = []; diets.value = []; avail.value = 'any'; skipPricey.value = false; focus.value = [];
 }
+
+// ---- cached pipeline: each step recomputes only when its own inputs change ----
+
+const searched = computed(() => searchRecipes(recipes.value, query.value));
+
+/** everything except the pantry-based filters; the "what to buy" panel works from this set */
+const base = computed(() =>
+  searched.value.filter(
+    (r) =>
+      (!cuisine.value || r.cuisine === cuisine.value) &&
+      (!meal.value || r.meals.includes(meal.value)) &&
+      (!main.value || r.main === main.value) &&
+      (!maxTime.value || r.minutes <= maxTime.value) &&
+      (!difficulty.value || r.difficulty === difficulty.value) &&
+      vibes.value.every((v) => r.vibes.includes(v)) &&
+      diets.value.every((d) => r.diets.includes(d)),
+  ));
+
+const ranked = computed(() => {
+  const miss = missingById.value;
+  const covers = soonCovers.value;
+  const maxMissing = { any: Infinity, ready: 0, two: 2, five: 5 }[avail.value];
+  let list = base.value.filter((r) => {
+    const m = miss.get(r.id)!;
+    if (skipPricey.value && hasPricey(m)) return false;
+    if (focus.value.length) return m.length > 0 && m.every((n) => focus.value.includes(n));
+    return m.length <= maxMissing;
+  });
+  // Text search keeps relevance order; otherwise sort by the chosen option.
+  if (!query.value.trim()) {
+    const soonCount = new Map<string, number>();
+    if (sort.value === 'soon') list.forEach((r) => soonCount.set(r.id, soonUsed(r, covers).length));
+    list = [...list].sort((a, b) =>
+      sort.value === 'quick' ? a.minutes - b.minutes
+      : sort.value === 'rated' ? (b.rating ?? 0) - (a.rating ?? 0)
+      : sort.value === 'soon' ? soonCount.get(b.id)! - soonCount.get(a.id)! || miss.get(a.id)!.length - miss.get(b.id)!.length
+      : miss.get(a.id)!.length - miss.get(b.id)!.length || (b.rating ?? 0) - (a.rating ?? 0));
+  }
+  return list;
+});
+
+const buyVisible = computed(() => !focus.value.length && avail.value !== 'ready' && pantry.value.length > 0);
+const buy = computed(() =>
+  buyVisible.value
+    ? suggestPurchases(base.value.filter((r) => buyFor.value === 'all' || (buyFor.value === 'baking') === isBaking(r)), missingById.value, skipPricey.value)
+    : null);
 
 function Select({ label, sig, opts }: { label: string; sig: typeof cuisine; opts: string[] }) {
   return (
@@ -73,42 +132,11 @@ function Chips({ label, sig, opts }: { label: string; sig: typeof vibes; opts: s
 
 export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
   const have = onHand.value;
-  const miss = missingById.value;
   const covers = soonCovers.value;
-  let list = searchRecipes(recipes.value, query.value);
-  if (favoritesOnly) list = list.filter((r) => favorites.value.includes(r.id));
-
-  // everything except the pantry-based filters; the "what to buy" panel works from this set
-  const base = list.filter(
-    (r) =>
-      (!cuisine.value || r.cuisine === cuisine.value) &&
-      (!meal.value || r.meals.includes(meal.value)) &&
-      (!main.value || r.main === main.value) &&
-      (!maxTime.value || r.minutes <= maxTime.value) &&
-      (!difficulty.value || r.difficulty === difficulty.value) &&
-      vibes.value.every((v) => r.vibes.includes(v)) &&
-      diets.value.every((d) => r.diets.includes(d)),
-  );
-
-  const maxMissing = { any: Infinity, ready: 0, two: 2, five: 5 }[avail.value];
-  list = base.filter((r) => {
-    const m = miss.get(r.id)!;
-    if (skipPricey.value && hasPricey(m)) return false;
-    if (focus.value.length) return m.length > 0 && m.every((n) => focus.value.includes(n));
-    return m.length <= maxMissing;
-  });
-
-  const buy = !favoritesOnly && !focus.value.length && avail.value !== 'ready' && pantry.value.length > 0
-    ? suggestPurchases(base.filter((r) => buyFor.value === 'all' || (buyFor.value === 'baking') === isBaking(r)), miss, skipPricey.value) : null;
-
-  // Text search keeps relevance order; otherwise sort by the chosen option.
-  if (!query.value.trim()) {
-    const soonCount = (r: (typeof list)[number]) => soonUsed(r, covers).length;
-    list = [...list].sort((a, b) =>
-      sort.value === 'quick' ? a.minutes - b.minutes
-      : sort.value === 'rated' ? (b.rating ?? 0) - (a.rating ?? 0)
-      : sort.value === 'soon' ? soonCount(b) - soonCount(a) || miss.get(a.id)!.length - miss.get(b.id)!.length
-      : miss.get(a.id)!.length - miss.get(b.id)!.length || (b.rating ?? 0) - (a.rating ?? 0));
+  let list = ranked.value;
+  if (favoritesOnly) {
+    const fav = new Set(favorites.value);
+    list = list.filter((r) => fav.has(r.id));
   }
 
   return (
@@ -116,8 +144,8 @@ export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
       <h1 class="page-title">{favoritesOnly ? 'Our favorites 💗' : 'What shall we cook?'}</h1>
       <div class="searchbar">
         <input
-          type="search" value={query.value} placeholder="Search recipes or ingredients…"
-          onInput={(e) => (query.value = (e.target as HTMLInputElement).value)} aria-label="Search recipes"
+          type="search" value={typed.value} placeholder="Search recipes or ingredients…"
+          onInput={(e) => setTyped((e.target as HTMLInputElement).value)} aria-label="Search recipes"
         />
         <button class="btn ghost" onClick={() => (showFilters.value = !showFilters.value)} aria-expanded={showFilters.value}>
           Filters{activeCount.value ? ` (${activeCount.value})` : ''}
@@ -136,13 +164,13 @@ export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
         <p class="focus">Showing recipes you can make after buying <strong>{focus.value.join(' + ')}</strong>
           <button class="btn ghost" onClick={() => (focus.value = [])}>Clear ✕</button></p>
       )}
-      {!favoritesOnly && !focus.value.length && avail.value !== 'ready' && pantry.value.length > 0 && <BuyPanel buy={buy!} />}
+      {!favoritesOnly && buy.value && <BuyPanel buy={buy.value} />}
 
       {showFilters.value && (
         <div class="filters">
-          <Select label="Cuisine" sig={cuisine} opts={options((r) => r.cuisine)} />
-          <Select label="Meal" sig={meal} opts={options((r) => r.meals)} />
-          <Select label="Main ingredient" sig={main} opts={options((r) => r.main)} />
+          <Select label="Cuisine" sig={cuisine} opts={cuisineOpts.value} />
+          <Select label="Meal" sig={meal} opts={mealOpts.value} />
+          <Select label="Main ingredient" sig={main} opts={mainOpts.value} />
           <label class="field">
             <span>Time</span>
             <select value={maxTime.value} onChange={(e) => (maxTime.value = Number((e.target as HTMLSelectElement).value))}>
@@ -158,7 +186,7 @@ export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
             </select>
           </label>
           <Chips label="Diet" sig={diets} opts={['vegetarian', 'vegan', 'gluten-free', 'dairy-free']} />
-          <Chips label="Vibe" sig={vibes} opts={options((r) => r.vibes)} />
+          <Chips label="Vibe" sig={vibes} opts={vibeOpts.value} />
           <button class="btn ghost" onClick={reset}>Clear filters</button>
         </div>
       )}

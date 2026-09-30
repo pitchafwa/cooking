@@ -1,6 +1,7 @@
 import { signal } from '@preact/signals';
 import type { Recipe, RecipeDetailData } from './types';
 import { setCanonRules } from './ingredients';
+import { buildSearchIndex } from './search';
 
 export const recipes = signal<Recipe[]>([]);
 export const loadState = signal<'loading' | 'ready' | 'error'>('loading');
@@ -12,9 +13,11 @@ export async function loadRecipes() {
   try {
     const res = await fetch(url('recipes.json'));
     if (!res.ok) throw new Error(String(res.status));
-    const rows = (await res.json()) as (Omit<Recipe, 'ingredients'> & { ings: string[] })[];
-    recipes.value = rows.map(({ ings, ...r }) => ({ ...r, ingredients: ings.map((name) => ({ name, text: name })) }));
+    recipes.value = (await res.json()) as Recipe[];
     loadState.value = 'ready';
+    // build the search index while the browser is idle so the first keystroke is fast
+    const warm = () => buildSearchIndex(recipes.value);
+    if ('requestIdleCallback' in window) requestIdleCallback(warm); else setTimeout(warm, 50);
   } catch {
     loadState.value = 'error';
   }

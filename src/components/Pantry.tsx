@@ -9,7 +9,7 @@ const showQuick = signal(true);
 
 export function Pantry() {
   const counts = new Map<string, number>();
-  recipes.value.forEach((r) => r.ingredients.forEach((i) => counts.set(i.name, (counts.get(i.name) ?? 0) + 1)));
+  recipes.value.forEach((r) => r.ings.forEach((n) => counts.set(n, (counts.get(n) ?? 0) + 1)));
   const known = [...counts].filter(([, c]) => c >= 3).map(([n]) => n).sort();
   let ready = 0;
   for (const m of missingById.value.values()) if (m.length === 0) ready++;

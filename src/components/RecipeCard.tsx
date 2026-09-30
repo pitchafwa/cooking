@@ -29,7 +29,7 @@ export function RecipeCard({ r, have, soon = [] }: { r: Recipe; have: Set<string
       {r.alt && <p class="alt">{r.alt}</p>}
       <p class="meta">{cap(r.cuisine)} · {fmtTime(r.minutes)} · {cap(r.difficulty)}</p>
       {a.missing.length > 0 && a.missing.length <= 3 && (
-        <p class="missing">Missing: {a.missing.map((m) => m.name).join(', ')}</p>
+        <p class="missing">Missing: {a.missing.join(', ')}</p>
       )}
       {soon.length > 0 && <p class="soon-note">⏳ Uses up: {soon.join(', ')}</p>}
       <div class="tags">

@@ -10,7 +10,7 @@ body {
   background: radial-gradient(900px 500px at 10% -5%, #f9dde680, transparent 60%),
               radial-gradient(800px 500px at 100% 0%, #e7defa90, transparent 60%),
               radial-gradient(700px 500px at 50% 110%, #d5e7d680, transparent 60%), var(--cream);
-  background-attachment: fixed; min-height: 100vh;
+  min-height: 100vh;
 }
 a { color: var(--lav-deep); }
 h1, h2, h3, .brand { font-family: 'Fraunces', Georgia, serif; font-weight: 600; letter-spacing: -.01em; }

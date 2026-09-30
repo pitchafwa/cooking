@@ -10,7 +10,7 @@ KEEP_POSSESSIVE = {"devil's", "shepherd's", "farmer's", "baker's", "hunter's", "
                    "butcher's", "cook's", "gardener's", "cowboy's", "pirate's", "poor man's", "rich man's", "lazy man's",
                    "man's", "woman's", "sailor's", "miner's", "fisherman's", "monk's", "nun's", "witch's", "gypsy's",
                    "beggar's", "lover's", "mother's", "father's", "valentine's", "st. patrick's", "new year's", "reuben's",
-                   "joe's", "maid's", "bride's", "drunkard's", "thief's", "tailor's", "crofter's", "ploughman's",
+                   "joe's", "tso's", "general tso's", "sloppy joe's", "hunter's", "maid's", "bride's", "drunkard's", "thief's", "tailor's", "crofter's", "ploughman's",
                    "plowman's", "sheppard's", "scholar's", "baby's", "children's", "kid's", "kids'"}
 FAMILY = r"(?:grandma|grandmother|grandpa|grandmama|granny|gran|nana|nanna|mom|mommy|mama|mother|dad|daddy|papa|aunt|auntie|aunty|uncle|my|our|mimi|gamma|oma|opa)"
 
@@ -32,9 +32,12 @@ HYPE_WORDS = {
     "best", "ultimate", "amazing", "awesome", "delicious", "fabulous", "fantastic", "incredible", "yummy", "yum", "favorite", "favourite",
     "famous", "perfect", "perfectly", "wonderful", "outstanding", "heavenly", "easiest", "easy", "quick", "quickie", "simple", "simplest",
     "fast", "speedy", "classic", "traditional", "basic", "authentic", "real", "great", "good", "tasty", "gourmet", "copycat", "scratch",
-    "my", "our", "the", "wow", "mmm", "mmmm", "yumm", "yummo", "lovely", "divine", "fantabulous", "winning", "supreme", "ultra", "kickin",
-    "unbelievable", "unbelievably", "very", "even", "easier", "quicker", "simpler", "nearly", "sensational", "spectacular", "decadent", "luscious", "scrumptious", "magnificent", "superb",
+    "my", "our", "the", "wow", "mmm", "mmmm", "yumm", "yummo", "lovely", "divine", "fantabulous", "winning", "ultra", "kickin",
+    "unbelievable", "unbelievably", "very", "even", "easier", "quicker", "simpler", "nearly", "sensational", "spectacular", "decadent", "luscious", "scrumptious", "magnificent", "superb",  # "supreme" is a dish word
 }
+# hype words that are part of a real dish name when followed by these words
+GUARD = {"simple": {"syrup"}, "quick": {"bread", "breads", "oats", "pickle", "pickles", "pickled"}, "great": {"northern"},
+         "easy": {"over"}, "real": {"estate"}, "fast": {"food"}}
 TRAILING_NOISE = {"wow", "yum", "yummy", "mmm", "mmmm", "delicious", "recipe", "recipes", "ever", "yumm", "please", "eh", "yay", "ii", "iii", "iv", "i"}
 CONNECTORS = {"and", "or", "with", "for", "of", "in", "on", "to", "like", "by", "plus", "from", "a", "an", "at", "as"}
 GERUND = {"making": "", "cooking": "", "preparing": "", "baking": "baked", "grilling": "grilled", "roasting": "roasted",
@@ -114,7 +117,14 @@ def clean_title(original):
     s = re.sub(r"\b(?:ww|oamc|rsc)\b|\bweight watchers\b(?: points?)?", " ", s, flags=re.I)
     s = re.sub(r"\b\d+\s*(?:pts?|points?)\b", " ", s, flags=re.I)
 
-    words = [w for w in s.split() if re.sub(r"[^a-z'-]", "", w.lower()) not in HYPE_WORDS]
+    toks = s.split()
+    words = []
+    for i, w in enumerate(toks):
+        key = re.sub(r"[^a-z'-]", "", w.lower())
+        nxt = re.sub(r"[^a-z]", "", toks[i + 1].lower()) if i + 1 < len(toks) else ""
+        if key in HYPE_WORDS and nxt not in GUARD.get(key, ()):
+            continue
+        words.append(w)
     while words and re.sub(r"[^a-z]", "", words[-1].lower()) in TRAILING_NOISE:
         words.pop()
     while words and words[0].lower() in CONNECTORS:

@@ -1,14 +1,5 @@
 export type Difficulty = 'easy' | 'medium' | 'involved';
 
-export interface Ingredient {
-  /** canonical name, matched against the pantry */
-  name: string;
-  /** display text from the source, e.g. "garlic cloves" */
-  text: string;
-  /** quantity from the source (no units in the dataset), e.g. "1 1/2" */
-  qty?: string;
-}
-
 /** Slim record from the search index (recipes.json). */
 export interface Recipe {
   id: string;
@@ -26,8 +17,8 @@ export interface Recipe {
   main: string;
   rating?: number | null;
   ratingCount?: number | null;
-  /** names only at index time; text/qty arrive with the details */
-  ingredients: Ingredient[];
+  /** canonical ingredient names; display text and quantities arrive with the details */
+  ings: string[];
 }
 
 /** Lazily fetched from details/<b>.json when a recipe opens. */

@@ -16,7 +16,7 @@ export function RecipeDetail({ id }: { id: string }) {
   }, [id]);
   if (!r) return <p class="empty">Recipe not found. <a href="#/recipes">Back to recipes</a></p>;
   const have = onHand.value;
-  const missing = r.ingredients.filter((i) => !have.has(i.name)).length;
+  const missing = r.ings.filter((n) => !have.has(n)).length;
   const cap = (s: string) => s.replace(/-/g, ' ');
   const title = (s: string) => cap(s).replace(/^./, (c) => c.toUpperCase());
 
@@ -43,9 +43,9 @@ export function RecipeDetail({ id }: { id: string }) {
           <h2>Ingredients <span class={`pill ${missing ? 'close' : 'ready'}`}>{missing ? `${missing} missing` : 'all on hand ✓'}</span></h2>
           {d?.ings.some((i) => i.qty) && <p class="note">Amounts show the number only — units are in the method.</p>}
           <ul class="ings">
-            {r.ingredients.map((i, n) => (
-              <li key={i.name} class={have.has(i.name) ? 'have' : 'lack'}>
-                <span aria-hidden="true">{have.has(i.name) ? '✓' : '○'}</span> {d?.ings[n]?.qty && <b class="qty">{d.ings[n].qty}</b>} {d?.ings[n]?.text ?? i.name}
+            {r.ings.map((name, n) => (
+              <li key={name} class={have.has(name) ? 'have' : 'lack'}>
+                <span aria-hidden="true">{have.has(name) ? '✓' : '○'}</span> {d?.ings[n]?.qty && <b class="qty">{d.ings[n].qty}</b>} {d?.ings[n]?.text ?? name}
               </li>
             ))}
           </ul>
