@@ -3,3 +3,4 @@ dist
 data/raw
 *.csv
 .DS_Store
+__pycache__/
