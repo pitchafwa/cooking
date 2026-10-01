@@ -175,3 +175,4 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); display: inline-block; }
 .dot.synced { background: var(--accent); } .dot.offline, .dot.syncing, .dot.loading { background: #c9a35f; }
 .dot.denied, .dot.error { background: #b4574f; } .dot.off { display: none; }
+.shuffle { margin-left: 14px; }

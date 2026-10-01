@@ -1,4 +1,7 @@
+import { useEffect } from 'preact/hooks';
 import { signal, computed, effect } from '@preact/signals';
+import { route } from '../router';
+import { diverseDinners } from '../inspire';
 import type { Recipe } from '../types';
 import { recipes } from '../data';
 import { favorites, pantry, useSoon, addToGrocery } from '../store';
@@ -31,6 +34,8 @@ const buyFor = signal<'meals' | 'baking' | 'all'>('meals');
 const focus = signal<string[]>([]);
 const showFilters = signal(false);
 const shown = signal(60);
+/** drives the shuffle of the default dinner ideas */
+const seed = signal(Date.now());
 
 // Any change to the search or filters restarts pagination.
 effect(() => {
@@ -50,6 +55,12 @@ const toggle = (s: typeof vibes, v: string) => (s.value = s.value.includes(v) ? 
 const activeCount = computed(() =>
   [cuisine.value, meal.value, main.value, maxTime.value, difficulty.value].filter(Boolean).length +
   vibes.value.length + diets.value.length + (avail.value !== 'any' ? 1 : 0) + (skipPricey.value ? 1 : 0));
+
+/** Back to the plain starting view (no search, no filters). */
+function resetAll() {
+  reset();
+  typed.value = ''; query.value = ''; sort.value = 'match'; showFilters.value = false; buyFor.value = 'meals';
+}
 
 function reset() {
   shown.value = 60;
@@ -73,6 +84,12 @@ const base = computed(() =>
       vibes.value.every((v) => r.vibes.includes(v)) &&
       diets.value.every((d) => r.diets.includes(d)),
   ));
+
+/** the starting view: nothing searched or filtered, so show varied dinner ideas instead of everything */
+const isDefaultView = computed(() =>
+  !query.value.trim() && !cuisine.value && !meal.value && !main.value && !maxTime.value && !difficulty.value &&
+  !vibes.value.length && !diets.value.length && avail.value === 'any' && !skipPricey.value && !focus.value.length && sort.value === 'match');
+const inspiration = computed(() => diverseDinners(recipes.value, seed.value));
 
 const ranked = computed(() => {
   const miss = missingById.value;
@@ -133,7 +150,10 @@ function Chips({ label, sig, opts }: { label: string; sig: typeof vibes; opts: s
 export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
   const have = onHand.value;
   const covers = soonCovers.value;
-  let list = ranked.value;
+  const inspire = !favoritesOnly && isDefaultView.value;
+  let list = inspire ? inspiration.value : ranked.value;
+  // leaving for another tab clears the search; opening a recipe keeps it so Back returns to the same results
+  useEffect(() => () => { if (!route.value.startsWith('recipe/')) resetAll(); }, []);
   if (favoritesOnly) {
     const fav = new Set(favorites.value);
     list = list.filter((r) => fav.has(r.id));
@@ -193,7 +213,11 @@ export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
         </div>
       )}
 
-      <p class="count">{list.length} recipe{list.length === 1 ? '' : 's'}</p>
+      {inspire ? (
+        <p class="count">Dinner ideas <button class="linkish shuffle" onClick={() => (seed.value = Date.now())}>Shuffle</button></p>
+      ) : (
+        <p class="count">{list.length.toLocaleString()} recipe{list.length === 1 ? '' : 's'}</p>
+      )}
       {list.length === 0 ? (
         <p class="empty">
           {favoritesOnly && !favorites.value.length ? 'Tap the heart on a recipe to keep it here.' : 'Nothing matches. Try loosening a filter.'}
