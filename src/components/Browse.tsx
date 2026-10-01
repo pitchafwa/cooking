@@ -141,8 +141,10 @@ export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
 
   return (
     <section>
-      <h1 class="page-title">{favoritesOnly ? 'Our favorites 💗' : 'What shall we cook?'}</h1>
+      <p class="eyebrow">{favoritesOnly ? 'Kept' : 'Tonight'}</p>
+      <h1 class="page-title">{favoritesOnly ? 'Our favorites' : 'What shall we cook?'}</h1>
       <div class="searchbar">
+        <svg class="sicon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
         <input
           type="search" value={typed.value} placeholder="Search recipes or ingredients…"
           onInput={(e) => setTyped((e.target as HTMLInputElement).value)} aria-label="Search recipes"
@@ -194,7 +196,7 @@ export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
       <p class="count">{list.length} recipe{list.length === 1 ? '' : 's'}</p>
       {list.length === 0 ? (
         <p class="empty">
-          {favoritesOnly && !favorites.value.length ? 'Tap the ♡ on a recipe to keep it here.' : 'Nothing matches — try loosening a filter ✨'}
+          {favoritesOnly && !favorites.value.length ? 'Tap the heart on a recipe to keep it here.' : 'Nothing matches. Try loosening a filter.'}
         </p>
       ) : (
         <>
@@ -215,7 +217,7 @@ function BuyPanel({ buy }: { buy: Buy }) {
   const { singles, plan } = buy;
   return (
     <div class="buy">
-      <h2>Worth picking up 🛒</h2>
+      <h2>Worth picking up</h2>
       <div class="seg small" role="group" aria-label="What to optimize for">
         {([['meals', 'For meals'], ['baking', 'For baking'], ['all', 'Everything']] as const).map(([k, l]) => (
           <button key={k} class={buyFor.value === k ? 'on' : ''} onClick={() => (buyFor.value = k)}>{l}</button>

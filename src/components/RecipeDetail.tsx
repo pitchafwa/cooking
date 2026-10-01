@@ -29,7 +29,7 @@ export function RecipeDetail({ id }: { id: string }) {
       </div>
       {r.alt && <p class="alt">Originally “{r.alt}”</p>}
       <p class="meta">
-        {title(r.cuisine)} · {fmtTime(r.minutes)} · {title(r.difficulty)}
+        {r.cuisine !== 'other' && <>{title(r.cuisine)} · </>}{fmtTime(r.minutes)} · {title(r.difficulty)}
         {d?.servings ? ` · serves ${d.servings}` : ''}
         {r.rating ? ` · ★ ${r.rating.toFixed(1)}` : ''}
       </p>
@@ -45,7 +45,7 @@ export function RecipeDetail({ id }: { id: string }) {
           <ul class="ings">
             {r.ings.map((name, n) => (
               <li key={name} class={have.has(name) ? 'have' : 'lack'}>
-                <span aria-hidden="true">{have.has(name) ? '✓' : '○'}</span> {d?.ings[n]?.qty && <b class="qty">{d.ings[n].qty}</b>} {d?.ings[n]?.text ?? name}
+                <span aria-hidden="true">{have.has(name) ? '✓' : '·'}</span> {d?.ings[n]?.qty && <b class="qty">{d.ings[n].qty}</b>} {d?.ings[n]?.text ?? name}
               </li>
             ))}
           </ul>

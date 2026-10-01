@@ -42,10 +42,10 @@ export function Pantry() {
       )}
 
       {pantry.value.length === 0 ? (
-        <p class="empty">Nothing here yet. Add what you have and recipes will light up ✨</p>
+        <p class="empty">Nothing here yet. Add what you have and recipes will appear.</p>
       ) : (
         <>
-          <p class="hint">Tap ⏳ on anything that needs using up soon — we'll find recipes that use it. Tap “ran out” when it's gone.</p>
+          <p class="hint">Mark anything that needs using up soon — we'll find recipes that use it. Tap “ran out” when it's gone.</p>
           {CATEGORIES.map((cat) => {
             const items = pantry.value.filter((p) => categoryOf(p) === cat);
             return items.length === 0 ? null : (
@@ -57,7 +57,7 @@ export function Pantry() {
                     return (
                       <li key={p} class={soon ? 'chip soon' : 'chip'}>
                         {p}
-                        <button class="tog" aria-pressed={soon} aria-label={`Use ${p} soon`} title="Use soon" onClick={() => toggleUseSoon(p)}>⏳</button>
+                        <button class="tog" aria-pressed={soon} aria-label={`Use ${p} soon`} title="Use soon" onClick={() => toggleUseSoon(p)}>use soon</button>
                         <button aria-label={`Ran out of ${p}`} title="Ran out" onClick={() => removeFromPantry(p)}>ran out ×</button>
                       </li>
                     );
