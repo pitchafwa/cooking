@@ -18,6 +18,7 @@ export function Pantry() {
 
   return (
     <section class="pantry">
+      <p class="eyebrow">Kitchen</p>
       <h1>What's in the kitchen</h1>
       <p class="sub">You can cook <strong>{ready.toLocaleString()}</strong> recipe{ready === 1 ? '' : 's'} right now. <a href="#/recipes">See them →</a></p>
 

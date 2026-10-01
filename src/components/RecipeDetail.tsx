@@ -3,6 +3,7 @@ import { recipes, fetchDetail } from '../data';
 import type { RecipeDetailData } from '../types';
 import { onHand } from '../match';
 import { Heart, fmtTime } from './RecipeCard';
+import { addToGrocery, onList } from '../store';
 
 const nyt = (q: string) => `https://cooking.nytimes.com/search?q=${encodeURIComponent(q)}`;
 
@@ -41,11 +42,18 @@ export function RecipeDetail({ id }: { id: string }) {
       <div class="cols">
         <section>
           <h2>Ingredients <span class={`pill ${missing ? 'close' : 'ready'}`}>{missing ? `${missing} missing` : 'all on hand ✓'}</span></h2>
+          {missing > 0 && (
+            <p class="addrow">
+              {r.ings.filter((n) => !have.has(n)).every(onList)
+                ? <span class="note">Missing items are on your grocery list. <a href="#/grocery">View list</a></span>
+                : <button class="btn ghost" onClick={() => addToGrocery(r.ings.filter((n) => !have.has(n)))}>Add {missing} missing to grocery list</button>}
+            </p>
+          )}
           {d?.ings.some((i) => i.qty) && <p class="note">Amounts show the number only — units are in the method.</p>}
           <ul class="ings">
             {r.ings.map((name, n) => (
               <li key={name} class={have.has(name) ? 'have' : 'lack'}>
-                <span aria-hidden="true">{have.has(name) ? '✓' : '·'}</span> {d?.ings[n]?.qty && <b class="qty">{d.ings[n].qty}</b>} {d?.ings[n]?.text ?? name}
+                <span aria-hidden="true">{have.has(name) ? '✓' : '·'}</span> {d?.ings[n]?.qty && <b class="qty">{d.ings[n].qty}</b>} {d?.ings[n]?.text ?? name}{!have.has(name) && onList(name) && <em class="listed"> on your list</em>}
               </li>
             ))}
           </ul>

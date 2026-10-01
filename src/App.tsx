@@ -1,13 +1,15 @@
 import { route } from './router';
 import { loadState, recipes } from './data';
-import { pantry, favorites } from './store';
+import { pantry, favorites, grocery } from './store';
 import { Browse } from './components/Browse';
 import { RecipeDetail } from './components/RecipeDetail';
 import { Pantry } from './components/Pantry';
+import { Grocery } from './components/Grocery';
 
 const TABS = [
   { id: 'recipes', label: 'Recipes' },
   { id: 'pantry', label: 'Pantry' },
+  { id: 'grocery', label: 'Grocery' },
   { id: 'favorites', label: 'Favorites' },
 ];
 
@@ -20,6 +22,7 @@ export function App() {
   else if (loadState.value === 'error') page = <p class="empty">Couldn't load recipes. Try refreshing.</p>;
   else if (r.startsWith('recipe/')) page = <RecipeDetail id={r.slice(7)} />;
   else if (r === 'pantry') page = <Pantry />;
+  else if (r === 'grocery') page = <Grocery />;
   else if (r === 'favorites') page = <Browse favoritesOnly />;
   else page = <Browse />;
 
@@ -35,6 +38,7 @@ export function App() {
             <a key={t.id} href={`#/${t.id}`} class={tab === t.id ? 'tab active' : 'tab'}>
               {t.label}
               {t.id === 'pantry' && <small>{pantry.value.length}</small>}
+              {t.id === 'grocery' && grocery.value.some((g) => !g.done) && <small>{grocery.value.filter((g) => !g.done).length}</small>}
               {t.id === 'favorites' && favorites.value.length > 0 && <small>{favorites.value.length}</small>}
             </a>
           ))}

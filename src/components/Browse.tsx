@@ -1,7 +1,7 @@
 import { signal, computed, effect } from '@preact/signals';
 import type { Recipe } from '../types';
 import { recipes } from '../data';
-import { favorites, pantry, useSoon } from '../store';
+import { favorites, pantry, useSoon, addToGrocery } from '../store';
 import { onHand, missingById, soonCovers, soonUsed, hasPricey, suggestPurchases, isBaking } from '../match';
 import { searchRecipes } from '../search';
 import { RecipeCard } from './RecipeCard';
@@ -164,7 +164,7 @@ export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
 
       {focus.value.length > 0 && (
         <p class="focus">Showing recipes you can make after buying <strong>{focus.value.join(' + ')}</strong>
-          <button class="btn ghost" onClick={() => (focus.value = [])}>Clear ✕</button></p>
+          <span class="buy-actions"><button class="linkish" onClick={() => addToGrocery(focus.value)}>Add to list</button><button class="linkish" onClick={() => (focus.value = [])}>Clear</button></span></p>
       )}
       {!favoritesOnly && buy.value && <BuyPanel buy={buy.value} />}
 
@@ -212,35 +212,46 @@ export function Browse({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
 
 type Buy = NonNullable<ReturnType<typeof suggestPurchases>>;
 const dollars = (tier: number) => '$'.repeat(tier);
+const buyOpen = signal(false);
 
+/** One quiet line by default; "More ideas" opens the tabs and single-item picks. */
 function BuyPanel({ buy }: { buy: Buy }) {
   const { singles, plan } = buy;
+  const picks = singles.filter((x) => x.unlocks > 0).slice(0, 8);
+  const showThem = (items: string[]) => { focus.value = items; avail.value = 'any'; };
   return (
     <div class="buy">
-      <h2>Worth picking up</h2>
-      <div class="seg small" role="group" aria-label="What to optimize for">
-        {([['meals', 'For meals'], ['baking', 'For baking'], ['all', 'Everything']] as const).map(([k, l]) => (
-          <button key={k} class={buyFor.value === k ? 'on' : ''} onClick={() => (buyFor.value = k)}>{l}</button>
-        ))}
+      <div class="buy-bar">
+        <span class="buy-label">Worth picking up</span>
+        {plan
+          ? <span class="buy-plan"><strong>{plan.items.join(' + ')}</strong> opens up <strong>{plan.unlocks}</strong> recipe{plan.unlocks === 1 ? '' : 's'}</span>
+          : <span class="buy-plan muted">Nothing close for this mix</span>}
+        <span class="buy-actions">
+          {plan && <button class="linkish" onClick={() => showThem(plan.items)}>Show them</button>}
+          {plan && <button class="linkish" onClick={() => addToGrocery(plan.items)}>Add to list</button>}
+          <button class="linkish" aria-expanded={buyOpen.value} onClick={() => (buyOpen.value = !buyOpen.value)}>{buyOpen.value ? 'Fewer ideas' : 'More ideas'}</button>
+        </span>
       </div>
-      {!singles.length && !plan && <p class="sub">Nothing within a few ingredients for this mix. Try another tab or loosen the filters.</p>}
-      {plan && (
-        <p class="plan">
-          Best trip: <strong>{plan.items.join(' + ')}</strong> opens up <strong>{plan.unlocks}</strong> recipe{plan.unlocks === 1 ? '' : 's'}.{' '}
-          <button class="linkish" onClick={() => { focus.value = plan.items; avail.value = 'any'; }}>Show them →</button>
-        </p>
-      )}
-      {singles.some((x) => x.unlocks > 0) && (
-        <>
-          <p class="sub">Buy just one thing:</p>
-          <div class="chipset">
-            {singles.filter((x) => x.unlocks > 0).slice(0, 8).map((x) => (
-              <button key={x.name} class="fchip buychip" onClick={() => { focus.value = [x.name]; avail.value = 'any'; }}>
-                {x.name} <span class="tier">{dollars(x.tier)}</span> <b>+{x.unlocks}</b>
-              </button>
+      {buyOpen.value && (
+        <div class="buy-more">
+          <div class="seg small" role="group" aria-label="What to optimize for">
+            {([['meals', 'For meals'], ['baking', 'For baking'], ['all', 'Everything']] as const).map(([k, l]) => (
+              <button key={k} class={buyFor.value === k ? 'on' : ''} onClick={() => (buyFor.value = k)}>{l}</button>
             ))}
           </div>
-        </>
+          {picks.length > 0 ? (
+            <>
+              <p class="sub">Buy just one thing:</p>
+              <div class="chipset">
+                {picks.map((x) => (
+                  <button key={x.name} class="fchip buychip" onClick={() => showThem([x.name])}>
+                    {x.name} <span class="tier">{dollars(x.tier)}</span> <b>+{x.unlocks}</b>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : <p class="sub">Nothing within a few ingredients for this mix. Try another tab or loosen the filters.</p>}
+        </div>
       )}
     </div>
   );

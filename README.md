@@ -40,4 +40,6 @@ Phase 1 done (browse, fuzzy search, filters, pantry-aware badges, basic pantry, 
 Phase 2 done: typed names are normalized ("Eggs" -> egg), owning cheddar covers "cheese" (and similar substitutions),
 pantry grouped by aisle with quick-add and "use soon" flags, a "worth picking up" panel (best single item / best 3-item
 trip to unlock recipes), and a skip-pricey-extras toggle.
-Next: grocery list (3), cloud sync (4), polish (5).
+Phase 3 done: grocery list grouped by aisle; ticking an item off moves it into the pantry (un-ticking undoes it);
+add missing ingredients from a recipe or the "worth picking up" bar; copy the list as text.
+Next: cloud sync (4), polish (5).
