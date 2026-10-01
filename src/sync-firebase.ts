@@ -18,7 +18,7 @@ export function firestoreAdapter(fs: FS, db: Firestore): Adapter {
           const state: RemoteState = {
             ...emptyRemote(),
             pantry: d.pantry ?? [], favorites: d.favorites ?? [], useSoon: d.useSoon ?? [],
-            assumeStaples: d.assumeStaples, grocery: d.grocery ?? {},
+            assumeStaples: d.assumeStaples, grocery: d.grocery ?? {}, plan: d.plan ?? {},
           };
           onState(state);
         },
@@ -32,6 +32,7 @@ export function firestoreAdapter(fs: FS, db: Firestore): Adapter {
         else if (op.t === 'remove') batch.set(ref, { [op.field]: fs.arrayRemove(...op.values) }, { merge: true });
         else if (op.t === 'item') batch.set(ref, { grocery: { [op.name]: op.item } }, { merge: true });
         else if (op.t === 'drop') batch.set(ref, { grocery: { [op.name]: fs.deleteField() } }, { merge: true });
+        else if (op.t === 'plan') batch.set(ref, { plan: { [op.date]: op.id === null ? fs.deleteField() : op.id } }, { merge: true });
         else batch.set(ref, { assumeStaples: op.value }, { merge: true });
       }
       await batch.commit();

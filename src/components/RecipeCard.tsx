@@ -25,7 +25,7 @@ export function RecipeCard({ r, have, soon = [] }: { r: Recipe; have: Set<string
     <a class="card" href={`#/recipe/${r.id}`}>
       <Heart id={r.id} />
       <span class={`pill ${a.tone}`}>{a.label}</span>
-      <h3>{r.title}</h3>
+      <h2>{r.title}</h2>
       {r.alt && <p class="alt">{r.alt}</p>}
       <p class="meta">{r.cuisine !== 'other' && <>{cap(r.cuisine)} · </>}{fmtTime(r.minutes)} · {cap(r.difficulty)}</p>
       {a.missing.length > 0 && a.missing.length <= 3 && (

@@ -23,6 +23,24 @@ export const favorites = persisted<string[]>('favorites', []);
 export const useSoon = persisted<string[]>('useSoon', []);
 export const assumeStaples = persisted<boolean>('assumeStaples', true);
 
+// ---------- meal plan: local date (YYYY-MM-DD) -> recipe id ----------
+export const plan = persisted<Record<string, string>>('plan', {});
+export const setPlan = (date: string, id: string) => (plan.value = { ...plan.value, [date]: id });
+export function clearPlan(date: string) {
+  const { [date]: _gone, ...rest } = plan.value;
+  plan.value = rest;
+}
+const pad = (n: number) => String(n).padStart(2, '0');
+export const dateKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+/** today and the next `n - 1` days */
+export function nextDays(n = 7, from = new Date()) {
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i);
+    const weekday = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.toLocaleDateString(undefined, { weekday: 'long' });
+    return { date: dateKey(d), weekday, short: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) };
+  });
+}
+
 /** Add an already-canonical name. */
 function pantryAdd(n: string) {
   if (n && !pantry.value.includes(n)) pantry.value = [...pantry.value, n].sort();

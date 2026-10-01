@@ -12,6 +12,7 @@ function applyServer(ops) {
     else if (op.t === 'remove') server.state[op.field] = server.state[op.field].filter(x => !op.values.includes(x));
     else if (op.t === 'item') server.state.grocery[op.name] = op.item;
     else if (op.t === 'drop') delete server.state.grocery[op.name];
+    else if (op.t === 'plan') { server.state.plan ??= {}; if (op.id === null) delete server.state.plan[op.date]; else server.state.plan[op.date] = op.id; }
     else server.state.assumeStaples = op.value;
   }
 }
@@ -67,6 +68,11 @@ await A.run(() => window.store.toggleFavorite('f-1')); await settle();
 ok((await B.get('favorites')).includes('f-1'), 'favorite syncs');
 await A.run(() => { window.store.assumeStaples.value = false; }); await settle();
 ok((await B.get('assumeStaples')) === false, 'staples setting syncs');
+
+await A.run(() => window.store.setPlan('2026-10-05', 'f-9')); await B.run(() => window.store.setPlan('2026-10-06', 'f-7')); await settle();
+ok((await B.get('plan'))['2026-10-05'] === 'f-9' && (await A.get('plan'))['2026-10-06'] === 'f-7', 'meal plan entries sync both ways');
+await B.run(() => window.store.clearPlan('2026-10-05')); await settle();
+ok(!('2026-10-05' in (await A.get('plan'))) && '2026-10-06' in (await A.get('plan')), 'removing a planned meal syncs');
 
 const quiet = server.writes; await settle(); await settle();
 ok(server.writes === quiet, `no write loops (total writes ${server.writes})`);

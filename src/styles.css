@@ -15,7 +15,9 @@ h1, h2, h3 { font-family: var(--head); font-weight: 300; letter-spacing: -0.005e
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 .shell { max-width: 1120px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 64px) 64px; }
-.top { padding: 40px 0 8px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; justify-content: space-between; }
+.top { padding: 40px 0 8px; display: grid; grid-template-columns: 1fr auto auto; gap: 14px 24px; align-items: center; }
+.synclink { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: var(--label); text-transform: uppercase; text-decoration: none; color: var(--muted); }
+.synclink:hover, .synclink.active { color: var(--ink); }
 .brand { display: flex; align-items: center; gap: 14px; font: 300 30px/1 var(--head); letter-spacing: 0.02em; color: var(--ink); text-decoration: none; }
 .mark { color: var(--accent); }
 .tabs { display: flex; gap: 4px; }
@@ -82,8 +84,8 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 /* recipe grid: hairlines, no boxes */
 .grid { display: grid; gap: 0 clamp(24px, 4vw, 40px); grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
 .card { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 22px 0 26px; color: inherit; text-decoration: none; border-top: 1px solid var(--line-strong); min-height: 214px; }
-.card:hover h3 { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
-.card h3 { margin: 10px 34px 0 0; font-size: 29px; line-height: 1.12; }
+.card:hover h2 { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.card h2 { margin: 10px 34px 0 0; font-size: 29px; line-height: 1.12; }
 .alt { margin: 0; font-size: 12px; font-style: italic; color: var(--muted); }
 .meta { margin: 0; font-size: 13px; color: var(--muted); }
 .missing { margin: 0; font-size: 13px; color: var(--warm-ink); }
@@ -146,7 +148,8 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 @media (max-width: 760px) {
   .top { padding-top: 26px; }
   .brand { font-size: 26px; }
-  .tabs { width: 100%; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 6px; }
+  .top { grid-template-columns: 1fr auto; grid-template-areas: 'brand sync' 'nav nav'; }
+  .brand { grid-area: brand; } .synclink { grid-area: sync; } .tabs { grid-area: nav; width: 100%; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 6px; }
   .tab { padding: 12px 2px; font-size: 11px; letter-spacing: 0.08em; gap: 4px; }
   .buy-plan { flex-basis: 100%; order: 2; font-size: 20px; } .buy-label { order: 1; } .buy-actions { order: 3; }
   .btn { padding: 0 18px; }
@@ -176,3 +179,23 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 .dot.synced { background: var(--accent); } .dot.offline, .dot.syncing, .dot.loading { background: #c9a35f; }
 .dot.denied, .dot.error { background: #b4574f; } .dot.off { display: none; }
 .shuffle { margin-left: 14px; }
+
+/* plan */
+.planpicker { margin: 14px 0 0; } .planpicker .btn { height: 44px; } .planpicker .chipset { margin-top: 12px; } .fchip small { color: var(--muted); margin-left: 4px; }
+.days { list-style: none; padding: 0; margin: 26px 0 0; }
+.day { display: grid; grid-template-columns: 150px 1fr; gap: 8px 24px; padding: 18px 0; border-top: 1px solid var(--line); align-items: baseline; }
+.dayname { display: flex; flex-direction: column; } .dayname span { font-size: 13px; color: var(--muted); }
+.daymeal { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.daytitle { font: 300 26px/1.15 var(--head); color: var(--ink); text-decoration: none; } .daytitle:hover { text-decoration: underline; text-underline-offset: 4px; }
+.empty-day { color: var(--muted); font-size: 15px; }
+.weekbar { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--line-strong); display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; justify-content: space-between; } .weekbar .sub { margin: 0; flex: 1 1 300px; }
+@media (max-width: 760px) { .day { grid-template-columns: 1fr; gap: 4px; } .dayname { flex-direction: row; gap: 12px; align-items: baseline; } }
+
+.chip .chipname { border: 0; background: transparent; color: inherit; font-size: 15px; padding: 6px 12px 6px 0; text-transform: capitalize; border-radius: 0; letter-spacing: 0; }
+.chip .chipname:hover { color: var(--accent-ink); background: transparent; }
+.soonmark { font-style: normal; font-size: 12px; color: var(--accent); }
+.chip { padding-right: 6px; }
+
+.skip { position: absolute; left: -9999px; top: 8px; background: var(--ink); color: var(--bg); padding: 10px 16px; z-index: 10; font-size: 13px; letter-spacing: var(--label); text-transform: uppercase; text-decoration: none; }
+.skip:focus { left: 8px; }
+main:focus { outline: none; }

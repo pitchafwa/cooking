@@ -6,6 +6,8 @@ import { CATEGORIES, COMMON_PANTRY, categoryOf } from '../ingredients';
 
 const draft = signal('');
 const showQuick = signal(true);
+/** which pantry item currently shows its actions */
+const openChip = signal<string | null>(null);
 
 export function Pantry() {
   const counts = new Map<string, number>();
@@ -46,7 +48,7 @@ export function Pantry() {
         <p class="empty">Nothing here yet. Add what you have and recipes will appear.</p>
       ) : (
         <>
-          <p class="hint">Mark anything that needs using up soon — we'll find recipes that use it. Tap “ran out” when it's gone.</p>
+          <p class="hint">Tap an item to mark it “use soon” (we'll find recipes that use it) or “ran out”.</p>
           {CATEGORIES.map((cat) => {
             const items = pantry.value.filter((p) => categoryOf(p) === cat);
             return items.length === 0 ? null : (
@@ -57,9 +59,15 @@ export function Pantry() {
                     const soon = useSoon.value.includes(p);
                     return (
                       <li key={p} class={soon ? 'chip soon' : 'chip'}>
-                        {p}
-                        <button class="tog" aria-pressed={soon} aria-label={`Use ${p} soon`} title="Use soon" onClick={() => toggleUseSoon(p)}>use soon</button>
-                        <button aria-label={`Ran out of ${p}`} title="Ran out" onClick={() => removeFromPantry(p)}>ran out ×</button>
+                        <button class="chipname" aria-expanded={openChip.value === p} onClick={() => (openChip.value = openChip.value === p ? null : p)}>
+                          {p}{soon && <em class="soonmark"> · use soon</em>}
+                        </button>
+                        {openChip.value === p && (
+                          <>
+                            <button class="tog" aria-pressed={soon} onClick={() => toggleUseSoon(p)}>{soon ? 'not urgent' : 'use soon'}</button>
+                            <button onClick={() => { removeFromPantry(p); openChip.value = null; }}>ran out ×</button>
+                          </>
+                        )}
                       </li>
                     );
                   })}

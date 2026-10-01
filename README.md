@@ -45,4 +45,9 @@ add missing ingredients from a recipe or the "worth picking up" bar; copy the li
 Phase 4 built: sync through Firebase (Google sign-in, one shared Firestore doc, offline-capable). Off until
 `src/firebaseConfig.ts` is filled in; see `docs/SETUP-FIREBASE.md`. Logic is in `src/sync-core.ts` (tested with
 `scripts/test_sync.mjs` against a fake server); the Firebase glue is `src/sync-firebase.ts` and `src/sync.ts`.
-Next: polish (5).
+Phase 5 done: weekly meal plan (syncs), installable app (manifest, icons) with an offline cache (`public/sw.js`:
+app files and recipe data are cached after the first visit), tap-to-reveal pantry actions, skip link and audited
+accessibility (axe: no violations on any screen at phone and laptop widths). The default Recipes view is a shuffled
+set of varied dinners.
+
+Install on a phone: open the site, then Share > Add to Home Screen (iOS) or menu > Install app (Android).

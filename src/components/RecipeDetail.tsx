@@ -4,6 +4,7 @@ import type { RecipeDetailData } from '../types';
 import { onHand } from '../match';
 import { Heart, fmtTime } from './RecipeCard';
 import { addToGrocery, onList } from '../store';
+import { PlanPicker } from './PlanPicker';
 
 const nyt = (q: string) => `https://cooking.nytimes.com/search?q=${encodeURIComponent(q)}`;
 
@@ -38,6 +39,8 @@ export function RecipeDetail({ id }: { id: string }) {
       <div class="tags">
         {[...r.diets, ...r.vibes].map((t) => <span key={t} class="tag">{cap(t)}</span>)}
       </div>
+
+      <PlanPicker id={r.id} />
 
       <div class="cols">
         <section>

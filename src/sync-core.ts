@@ -5,12 +5,13 @@
  * adding at once both keep their items; grocery items live in a map keyed by name so edits don't clobber each other.
  */
 import { effect, batch } from '@preact/signals';
-import { pantry, favorites, useSoon, grocery, assumeStaples, type GroceryItem } from './store';
+import { pantry, favorites, useSoon, grocery, assumeStaples, plan, type GroceryItem } from './store';
 
 export interface RemoteItem { done: boolean; stocked?: boolean; at: number }
 export interface RemoteState {
   pantry: string[]; favorites: string[]; useSoon: string[]; assumeStaples?: boolean;
   grocery: Record<string, RemoteItem>;
+  plan?: Record<string, string>;
 }
 export type SetField = 'pantry' | 'favorites' | 'useSoon';
 export type Op =
@@ -18,7 +19,8 @@ export type Op =
   | { t: 'remove'; field: SetField; values: string[] }
   | { t: 'item'; name: string; item: RemoteItem }
   | { t: 'drop'; name: string }
-  | { t: 'staples'; value: boolean };
+  | { t: 'staples'; value: boolean }
+  | { t: 'plan'; date: string; id: string | null };
 
 export interface Adapter {
   /** calls onState with the full remote state now and after every change (including our own writes) */
@@ -30,10 +32,10 @@ export interface Hooks { onSynced(): void; onError(e: unknown): void }
 const MERGED_KEY = 'hub:merged';
 const SET_FIELDS: SetField[] = ['pantry', 'favorites', 'useSoon'];
 
-export const emptyRemote = (): RemoteState => ({ pantry: [], favorites: [], useSoon: [], grocery: {} });
+export const emptyRemote = (): RemoteState => ({ pantry: [], favorites: [], useSoon: [], grocery: {}, plan: {} });
 
-export function readLocal(): { pantry: string[]; favorites: string[]; useSoon: string[]; assumeStaples: boolean; grocery: GroceryItem[] } {
-  return { pantry: pantry.value, favorites: favorites.value, useSoon: useSoon.value, assumeStaples: assumeStaples.value, grocery: grocery.value };
+export function readLocal(): { pantry: string[]; favorites: string[]; useSoon: string[]; assumeStaples: boolean; grocery: GroceryItem[]; plan: Record<string, string> } {
+  return { pantry: pantry.value, favorites: favorites.value, useSoon: useSoon.value, assumeStaples: assumeStaples.value, grocery: grocery.value, plan: plan.value };
 }
 
 export function diff(remote: RemoteState, local: ReturnType<typeof readLocal>, now = Date.now()): Op[] {
@@ -55,16 +57,20 @@ export function diff(remote: RemoteState, local: ReturnType<typeof readLocal>, n
     }
   });
   for (const name of Object.keys(remote.grocery)) if (!names.has(name)) ops.push({ t: 'drop', name });
+  const rp = remote.plan ?? {};
+  for (const [date, id] of Object.entries(local.plan)) if (rp[date] !== id) ops.push({ t: 'plan', date, id });
+  for (const date of Object.keys(rp)) if (!(date in local.plan)) ops.push({ t: 'plan', date, id: null });
   return ops;
 }
 
 export function applyOps(remote: RemoteState, ops: Op[]): RemoteState {
-  const next: RemoteState = { ...remote, pantry: [...remote.pantry], favorites: [...remote.favorites], useSoon: [...remote.useSoon], grocery: { ...remote.grocery } };
+  const next: RemoteState = { ...remote, plan: { ...(remote.plan ?? {}) }, pantry: [...remote.pantry], favorites: [...remote.favorites], useSoon: [...remote.useSoon], grocery: { ...remote.grocery } };
   for (const op of ops) {
     if (op.t === 'add') next[op.field] = [...new Set([...next[op.field], ...op.values])];
     else if (op.t === 'remove') next[op.field] = next[op.field].filter((x) => !op.values.includes(x));
     else if (op.t === 'item') next.grocery[op.name] = op.item;
     else if (op.t === 'drop') delete next.grocery[op.name];
+    else if (op.t === 'plan') { if (op.id === null) delete next.plan![op.date]; else next.plan![op.date] = op.id; }
     else next.assumeStaples = op.value;
   }
   return next;
@@ -85,6 +91,8 @@ function setLocal(s: RemoteState) {
       .sort((a, b) => a[1].at - b[1].at)
       .map(([name, r]) => ({ name, done: r.done, ...(r.stocked ? { stocked: true } : {}) }));
     if (JSON.stringify(items) !== JSON.stringify(grocery.value)) grocery.value = items;
+    const rp = s.plan ?? {};
+    if (JSON.stringify(rp) !== JSON.stringify(plan.value)) plan.value = { ...rp };
   });
 }
 
@@ -93,6 +101,7 @@ function mergeLocal(s: RemoteState): RemoteState {
   const local = readLocal();
   const merged = applyOps(s, [
     ...SET_FIELDS.map((field) => ({ t: 'add' as const, field, values: local[field] })),
+    ...Object.entries(local.plan).filter(([d]) => !(s.plan ?? {})[d]).map(([date, id]) => ({ t: 'plan' as const, date, id })),
     ...local.grocery.filter((g) => !s.grocery[g.name]).map((g, i) => ({ t: 'item' as const, name: g.name, item: { done: g.done, ...(g.stocked ? { stocked: true } : {}), at: Date.now() + i } })),
   ]);
   return merged;
