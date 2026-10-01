@@ -5,12 +5,15 @@ import { Browse } from './components/Browse';
 import { RecipeDetail } from './components/RecipeDetail';
 import { Pantry } from './components/Pantry';
 import { Grocery } from './components/Grocery';
+import { SyncPage } from './components/SyncPage';
+import { syncState } from './sync';
 
 const TABS = [
   { id: 'recipes', label: 'Recipes' },
   { id: 'pantry', label: 'Pantry' },
   { id: 'grocery', label: 'Grocery' },
   { id: 'favorites', label: 'Favorites' },
+  { id: 'sync', label: 'Sync' },
 ];
 
 export function App() {
@@ -23,6 +26,7 @@ export function App() {
   else if (r.startsWith('recipe/')) page = <RecipeDetail id={r.slice(7)} />;
   else if (r === 'pantry') page = <Pantry />;
   else if (r === 'grocery') page = <Grocery />;
+  else if (r === 'sync') page = <SyncPage />;
   else if (r === 'favorites') page = <Browse favoritesOnly />;
   else page = <Browse />;
 
@@ -39,6 +43,7 @@ export function App() {
               {t.label}
               {t.id === 'pantry' && <small>{pantry.value.length}</small>}
               {t.id === 'grocery' && grocery.value.some((g) => !g.done) && <small>{grocery.value.filter((g) => !g.done).length}</small>}
+              {t.id === 'sync' && <i class={`dot ${syncState.value.mode}`} aria-hidden="true" />}
               {t.id === 'favorites' && favorites.value.length > 0 && <small>{favorites.value.length}</small>}
             </a>
           ))}

@@ -42,4 +42,7 @@ pantry grouped by aisle with quick-add and "use soon" flags, a "worth picking up
 trip to unlock recipes), and a skip-pricey-extras toggle.
 Phase 3 done: grocery list grouped by aisle; ticking an item off moves it into the pantry (un-ticking undoes it);
 add missing ingredients from a recipe or the "worth picking up" bar; copy the list as text.
-Next: cloud sync (4), polish (5).
+Phase 4 built: sync through Firebase (Google sign-in, one shared Firestore doc, offline-capable). Off until
+`src/firebaseConfig.ts` is filled in; see `docs/SETUP-FIREBASE.md`. Logic is in `src/sync-core.ts` (tested with
+`scripts/test_sync.mjs` against a fake server); the Firebase glue is `src/sync-firebase.ts` and `src/sync.ts`.
+Next: polish (5).

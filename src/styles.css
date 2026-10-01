@@ -147,7 +147,7 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
   .top { padding-top: 26px; }
   .brand { font-size: 26px; }
   .tabs { width: 100%; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 6px; }
-  .tab { padding: 12px 8px; font-size: 12px; }
+  .tab { padding: 12px 2px; font-size: 11px; letter-spacing: 0.08em; gap: 4px; }
   .buy-plan { flex-basis: 100%; order: 2; font-size: 20px; } .buy-label { order: 1; } .buy-actions { order: 3; }
   .btn { padding: 0 18px; }
 }
@@ -171,3 +171,7 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 .stocked { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
 .bought .btn { margin-top: 18px; height: 44px; }
 .copyrow { margin-top: 28px; }
+
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); display: inline-block; }
+.dot.synced { background: var(--accent); } .dot.offline, .dot.syncing, .dot.loading { background: #c9a35f; }
+.dot.denied, .dot.error { background: #b4574f; } .dot.off { display: none; }

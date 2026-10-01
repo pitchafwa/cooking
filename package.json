@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@preact/signals": "^2.11.3",
+    "firebase": "^12.19.0",
     "preact": "^11.0.0"
   },
   "devDependencies": {
